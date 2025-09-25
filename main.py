@@ -17,6 +17,8 @@ import asyncio
 import signal
 import sys
 import traceback
+from aiohttp import web
+import threading
 
 # AI Libraries with Nano Banana support
 try:
@@ -838,9 +840,203 @@ class MarketingAgencyBot(commands.Bot):
         if message.content.startswith('!ping'):
             await message.channel.send("Pong! Bot is responding to messages.")
 
+    # ===== CLICKUP WEBHOOK AUTOMATION =====
+    
+    async def handle_clickup_webhook(self, webhook_data):
+        """Handle ClickUp webhook and create Discord channel for new tasks"""
+        try:
+            event = webhook_data.get("event")
+            
+            # Only process task creation events
+            if event != "taskCreated":
+                logger.info(f"Ignoring ClickUp event: {event}")
+                return
+            
+            task_data = webhook_data.get("task_id")
+            if not task_data:
+                logger.error("No task data in ClickUp webhook")
+                return
+            
+            # Get task details from ClickUp API
+            task_details = await self.get_clickup_task_details(task_data)
+            if not task_details:
+                logger.error(f"Could not get task details for task {task_data}")
+                return
+            
+            # Create Discord channel for the task
+            channel = await self.create_channel_from_clickup_task(task_details)
+            if channel:
+                logger.info(f"Created Discord channel {channel.name} for ClickUp task {task_details.get("name", "Unknown")}")
+            
+        except Exception as e:
+            logger.error(f"ClickUp webhook error: {e}")
+    
+    async def get_clickup_task_details(self, task_id):
+        """Get task details from ClickUp API"""
+        try:
+            if not self.clickup_config["api_key"]:
+                logger.error("ClickUp API key not configured")
+                return None
+            
+            headers = {
+                "Authorization": self.clickup_config["api_key"],
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                f"{self.clickup_config["base_url"]}/task/{task_id}",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"ClickUp API error: {response.status_code} - {response.text}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting ClickUp task details: {e}")
+            return None
+    
+    async def create_channel_from_clickup_task(self, task_details):
+        """Create Discord channel from ClickUp task"""
+        try:
+            # Extract task information
+            task_name = task_details.get("name", "Unknown Task")
+            task_id = task_details.get("id", "")
+            task_description = task_details.get("description", "")
+            task_url = task_details.get("url", "")
+            
+            # Create clean channel name
+            channel_name = re.sub(r"[^a-zA-Z0-9s-]", "", task_name.lower())
+            channel_name = re.sub(r"s+", "-", channel_name)
+            channel_name = channel_name[:50]  # Discord channel name limit
+            
+            # Find projects category or create it
+            guild = None
+            for g in self.guilds:
+                guild = g
+                break
+            
+            if not guild:
+                logger.error("No guild found for bot")
+                return None
+            
+            # Find or create "Projects" category
+            projects_category = None
+            for category in guild.categories:
+                if category.name.lower() == "projects":
+                    projects_category = category
+                    break
+            
+            if not projects_category:
+                projects_category = await guild.create_category("Projects")
+                logger.info("Created Projects category")
+            
+            # Create the channel
+            channel = await guild.create_text_channel(
+                name=channel_name,
+                category=projects_category,
+                topic=f"ClickUp Task: {task_name} | ID: {task_id}"
+            )
+            
+            # Create welcome message with task details
+            embed = discord.Embed(
+                title=f"🚀 New Project: {task_name}",
+                description=task_description[:1000] if task_description else "No description provided",
+                color=self.agency_config["primary_color"],
+                url=task_url if task_url else None
+            )
+            
+            embed.add_field(
+                name="📋 ClickUp Task",
+                value=f"**ID:** {task_id}n**Link:** [View in ClickUp]({task_url})" if task_url else f"**ID:** {task_id}",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="🎯 Next Steps",
+                value="• Review task requirementsn• Assign team membersn• Set project timelinen• Begin work!",
+                inline=False
+            )
+            
+            embed.set_footer(text="Automatically created from ClickUp task")
+            embed.timestamp = datetime.now()
+            
+            await channel.send(embed=embed)
+            
+            # Store in active projects
+            project_id = str(uuid.uuid4())
+            self.active_projects[project_id] = {
+                "name": task_name,
+                "channel_id": channel.id,
+                "clickup_task_id": task_id,
+                "created_at": datetime.now(),
+                "status": "active"
+            }
+            
+            self.project_channels[channel.id] = project_id
+            
+            return channel
+            
+        except Exception as e:
+            logger.error(f"Error creating Discord channel from ClickUp task: {e}")
+            return None
+
 # ===== BOT INSTANCE CREATION =====
 # Create bot instance first so commands can reference it
 bot = MarketingAgencyBot()
+
+# ===== CLICKUP WEBHOOK SERVER =====
+
+async def clickup_webhook_handler(request):
+    """Handle incoming ClickUp webhooks"""
+    try:
+        # Verify the request
+        if request.method != "POST":
+            return web.Response(status=405, text="Method not allowed")
+        
+        # Get webhook data
+        webhook_data = await request.json()
+        logger.info(f"Received ClickUp webhook: {webhook_data.get("event", "unknown")}")
+        
+        # Process the webhook
+        await bot.handle_clickup_webhook(webhook_data)
+        
+        return web.Response(status=200, text="OK")
+        
+    except Exception as e:
+        logger.error(f"Webhook handler error: {e}")
+        return web.Response(status=500, text="Internal server error")
+
+def start_webhook_server():
+    """Start the webhook server in a separate thread"""
+    try:
+        app = web.Application()
+        app.router.add_post("/webhook/clickup", clickup_webhook_handler)
+        
+        # Health check endpoint
+        async def health_check(request):
+            return web.Response(text="ClickUp Webhook Server is running!")
+        
+        app.router.add_get("/", health_check)
+        app.router.add_get("/health", health_check)
+        
+        # Get port from environment or use default
+        port = int(os.getenv("WEBHOOK_PORT", "8080"))
+        
+        logger.info(f"Starting ClickUp webhook server on port {port}")
+        web.run_app(app, host="0.0.0.0", port=port)
+        
+    except Exception as e:
+        logger.error(f"Webhook server error: {e}")
+
+def run_webhook_server():
+    """Run webhook server in background thread"""
+    webhook_thread = threading.Thread(target=start_webhook_server, daemon=True)
+    webhook_thread.start()
+    logger.info("ClickUp webhook server started in background")
 
 # ===== ENTERPRISE CONTENT CREATION =====
 
@@ -1489,6 +1685,57 @@ async def cmd_status(interaction: discord.Interaction):
         else:
             await interaction.followup.send(f"❌ Status error: {str(e)}")
 
+@bot.tree.command(name="webhook", description="🔗 Show ClickUp webhook integration status")
+async def cmd_webhook_status(interaction: discord.Interaction):
+    """Show ClickUp webhook integration status"""
+    try:
+        webhook_port = os.getenv("WEBHOOK_PORT", "8080")
+        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "your-app.railway.app")
+        webhook_url = f"https://{railway_domain}/webhook/clickup"
+        
+        embed = discord.Embed(
+            title="🔗 ClickUp Webhook Integration",
+            description="Automatic Discord channel creation from ClickUp tasks",
+            color=bot.agency_config["accent_color"]
+        )
+        
+        embed.add_field(
+            name="📡 Webhook URL",
+            value=f"`{webhook_url}`",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="⚙️ Configuration",
+            value=f"**Port:** {webhook_port}\n**Status:** 🟢 Active\n**Events:** Task Creation",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🎯 How it Works",
+            value="1. Create task in ClickUp\n2. ClickUp sends webhook\n3. Bot creates Discord channel\n4. Channel added to Projects category",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📋 Setup Instructions",
+            value=f"1. Go to ClickUp Space Settings\n2. Add webhook: `{webhook_url}`\n3. Select \"Task Created\" event\n4. Save webhook configuration",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="📊 Active Projects",
+            value=f"Currently tracking {len(bot.active_projects)} projects",
+            inline=True
+        )
+        
+        embed.set_footer(text="ClickUp Webhook Automation • Marketing Agency AI Hub")
+        
+        await interaction.response.send_message(embed=embed)
+        
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Webhook status error: {str(e)}")
+
 @bot.tree.command(name="help", description="❓ Show marketing agency AI hub commands")
 async def cmd_help(interaction: discord.Interaction):
     try:
@@ -1506,7 +1753,8 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="📁 Project Management",
-            value="• `/upload` - Upload files to create projects\n• `/project` - Create new project channels\n• `/clickup` - ClickUp task management",
+            value="• `/upload` - Upload files to create projects\n• `/project` - Create new project channels\n• `/clickup` - ClickUp task management
+• `/webhook` - ClickUp webhook automation status",
             inline=False
         )
         
@@ -1530,7 +1778,8 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows",
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows
+• Automatic ClickUp-to-Discord integration",
             inline=False
         )
         
@@ -1586,6 +1835,8 @@ if __name__ == "__main__":
         
         # Add error handling for bot startup
         try:
+            # Start ClickUp webhook server
+            run_webhook_server()
             logger.info("Starting Marketing Agency AI Hub...")
             bot.run(token)
         except discord.errors.LoginFailure:
