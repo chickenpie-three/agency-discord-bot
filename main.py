@@ -845,14 +845,14 @@ class MarketingAgencyBot(commands.Bot):
     async def handle_clickup_webhook(self, webhook_data):
         """Handle ClickUp webhook and create Discord channel for new tasks"""
         try:
-            event = webhook_data.get("event")
+            event = webhook_data.get('event')
             
             # Only process task creation events
             if event != "taskCreated":
                 logger.info(f"Ignoring ClickUp event: {event}")
                 return
             
-            task_data = webhook_data.get("task_id")
+            task_data = webhook_data.get('task_id')
             if not task_data:
                 logger.error("No task data in ClickUp webhook")
                 return
@@ -866,7 +866,7 @@ class MarketingAgencyBot(commands.Bot):
             # Create Discord channel for the task
             channel = await self.create_channel_from_clickup_task(task_details)
             if channel:
-                logger.info(f"Created Discord channel {channel.name} for ClickUp task {task_details.get("name", "Unknown")}")
+                logger.info(f"Created Discord channel {channel.name} for ClickUp task {task_details.get('name', 'Unknown')}")
             
         except Exception as e:
             logger.error(f"ClickUp webhook error: {e}")
@@ -884,7 +884,7 @@ class MarketingAgencyBot(commands.Bot):
             }
             
             response = requests.get(
-                f"{self.clickup_config["base_url"]}/task/{task_id}",
+                f"{self.clickup_config['base_url']}/task/{task_id}",
                 headers=headers,
                 timeout=10
             )
@@ -903,10 +903,10 @@ class MarketingAgencyBot(commands.Bot):
         """Create Discord channel from ClickUp task"""
         try:
             # Extract task information
-            task_name = task_details.get("name", "Unknown Task")
-            task_id = task_details.get("id", "")
-            task_description = task_details.get("description", "")
-            task_url = task_details.get("url", "")
+            task_name = task_details.get('name', 'Unknown Task')
+            task_id = task_details.get('id', '')
+            task_description = task_details.get('description', '')
+            task_url = task_details.get('url', '')
             
             # Create clean channel name
             channel_name = re.sub(r"[^a-zA-Z0-9s-]", "", task_name.lower())
@@ -999,7 +999,7 @@ async def clickup_webhook_handler(request):
         
         # Get webhook data
         webhook_data = await request.json()
-        logger.info(f"Received ClickUp webhook: {webhook_data.get("event", "unknown")}")
+        logger.info(f"Received ClickUp webhook: {webhook_data.get('event', 'unknown')}")
         
         # Process the webhook
         await bot.handle_clickup_webhook(webhook_data)
@@ -1753,9 +1753,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="📁 Project Management",
-            value="• `/upload` - Upload files to create projects\n• `/project` - Create new project channels\n• `/clickup` - ClickUp task management
-• `/webhook` - ClickUp webhook automation status",
-            inline=False
+            value="• `/upload` - Upload files to create projects\n• `/project` - Create new project channels\n• `/clickup` - ClickUp task management\n• `/webhook` - ClickUp webhook automation status",            inline=False
         )
         
         embed.add_field(
@@ -1778,9 +1776,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows
-• Automatic ClickUp-to-Discord integration",
-            inline=False
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows\n• Automatic ClickUp-to-Discord integration",            inline=False
         )
         
         embed.set_footer(text="AI-Powered Marketing Excellence • Results-Driven • Data-Informed")
