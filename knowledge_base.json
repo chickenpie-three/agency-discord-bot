@@ -1,0 +1,59 @@
+{
+  "company_info": {
+    "name": "STAFFVIRTUAL",
+    "description": "Professional virtual staffing and business support services",
+    "mission": "To provide high-quality virtual staffing solutions that help businesses scale efficiently",
+    "vision": "To be the leading provider of virtual talent solutions globally",
+    "founded": "2024",
+    "headquarters": "Remote-first company"
+  },
+  "services": {
+    "virtual_assistants": {
+      "description": "Professional virtual assistants for administrative tasks",
+      "specialties": ["Administrative support", "Email management", "Calendar scheduling", "Data entry", "Customer service"]
+    },
+    "creative_services": {
+      "description": "Creative and design support services",
+      "specialties": ["Graphic design", "Content creation", "Social media management", "Video editing", "Brand development"]
+    },
+    "technical_services": {
+      "description": "Technical and development support",
+      "specialties": ["Web development", "Software development", "IT support", "Database management", "System administration"]
+    },
+    "marketing_services": {
+      "description": "Digital marketing and growth services",
+      "specialties": ["SEO", "PPC advertising", "Social media marketing", "Content marketing", "Email marketing"]
+    }
+  },
+  "target_audience": {
+    "primary": ["Small to medium businesses", "Startups", "Entrepreneurs", "Growing companies"],
+    "industries": ["Technology", "E-commerce", "Professional services", "Healthcare", "Real estate"],
+    "pain_points": ["Limited budget for full-time staff", "Need for specialized skills", "Scaling challenges", "Time management"]
+  },
+  "brand_values": [
+    "Reliability",
+    "Professionalism", 
+    "Innovation",
+    "Flexibility",
+    "Quality",
+    "Transparency"
+  ],
+  "competitive_advantages": [
+    "Carefully vetted virtual professionals",
+    "Flexible engagement models",
+    "Competitive pricing",
+    "24/7 support availability",
+    "Industry expertise",
+    "Scalable solutions"
+  ],
+  "pricing_models": {
+    "hourly": "Flexible hourly rates based on skill level and requirements",
+    "project_based": "Fixed pricing for specific projects and deliverables",
+    "monthly_retainer": "Monthly packages for ongoing support needs"
+  },
+  "contact_info": {
+    "website": "www.staffvirtual.com",
+    "email": "info@staffvirtual.com",
+    "support_hours": "24/7 availability for urgent matters, standard business hours for general inquiries"
+  }
+}

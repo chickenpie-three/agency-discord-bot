@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: staffvirtual-discord-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: BRAND_NAME
+        value: STAFFVIRTUAL
+      - key: BRAND_PRIMARY_COLOR
+        value: "#1888FF"
+      - key: BRAND_SECONDARY_COLOR
+        value: "#F8F8EB"
+      - key: BRAND_ACCENT_COLOR
+        value: "#004B8D"

@@ -1,0 +1,48 @@
+# ==============================================
+# MARKETING AGENCY AI BOT CONFIGURATION
+# ==============================================
+# Copy this file to .env and fill in your actual values
+
+# Discord Bot Configuration (REQUIRED)
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+AGENCY_NAME=Marketing Pro AI
+
+# AI Configuration (REQUIRED)
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+COMPLETION_MODEL=gemini-2.0-flash-exp
+IMAGE_MODEL=gemini-2.5-flash-image-preview
+
+# ClickUp Integration (REQUIRED for project management)
+CLICKUP_API_KEY=your_clickup_api_key_here
+CLICKUP_TEAM_ID=your_clickup_team_id_here
+
+# Agency Branding (Optional)
+AGENCY_PRIMARY_COLOR=#2563eb
+AGENCY_SECONDARY_COLOR=#f8fafc
+AGENCY_ACCENT_COLOR=#10b981
+AGENCY_WARNING_COLOR=#f59e0b
+AGENCY_ERROR_COLOR=#ef4444
+
+# WordPress Integration (Optional - for auto-posting blogs)
+WP_SITE_URL=https://yourwordpresssite.com
+WP_USERNAME=your_wordpress_username
+WP_APP_PASSWORD=your_wordpress_app_password
+
+# Social Media APIs (Optional - for auto-posting)
+TWITTER_API_KEY=your_twitter_api_key
+TWITTER_API_SECRET=your_twitter_api_secret
+TWITTER_ACCESS_TOKEN=your_twitter_access_token
+TWITTER_ACCESS_SECRET=your_twitter_access_secret
+
+FACEBOOK_APP_ID=your_facebook_app_id
+FACEBOOK_APP_SECRET=your_facebook_app_secret
+FACEBOOK_ACCESS_TOKEN=your_facebook_access_token
+
+LINKEDIN_CLIENT_ID=your_linkedin_client_id
+LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
+LINKEDIN_ACCESS_TOKEN=your_linkedin_access_token
+
+# File Processing
+OUTPUT_PATH=./output/
+DEBUG=False

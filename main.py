@@ -1,0 +1,932 @@
+import discord
+from discord.ext import commands
+import asyncio
+import logging
+import os
+from dotenv import load_dotenv
+import io
+import json
+import tempfile
+import re
+import requests
+from datetime import datetime, timedelta
+import aiofiles
+import uuid
+
+# AI Libraries with Nano Banana support
+try:
+    from google import genai
+    from google.genai import types
+    NANO_BANANA_AVAILABLE = True
+except ImportError:
+    try:
+        import google.generativeai as genai
+        types = None
+        NANO_BANANA_AVAILABLE = False
+    except ImportError:
+        genai = None
+        types = None
+        NANO_BANANA_AVAILABLE = False
+
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
+# Knowledge management
+from knowledge_manager import KnowledgeManager
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Bot configuration
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+
+class MarketingAgencyBot(commands.Bot):
+    def __init__(self):
+        super().__init__(
+            command_prefix='!agency ',
+            intents=intents,
+            description='Marketing Agency AI Hub - Complete Project Management & Content Creation Suite'
+        )
+        
+        # Agency configuration
+        def parse_color(color_str, default):
+            try:
+                if not color_str or color_str.strip() == '':
+                    return int(default.replace('#', ''), 16)
+                color_clean = color_str.replace('#', '').strip()
+                return int(color_clean, 16) if len(color_clean) == 6 else int(default.replace('#', ''), 16)
+            except (ValueError, AttributeError):
+                return int(default.replace('#', ''), 16)
+        
+        self.agency_config = {
+            'name': os.getenv('AGENCY_NAME', 'Marketing Pro AI'),
+            'primary_color': parse_color(os.getenv('AGENCY_PRIMARY_COLOR'), '#2563eb'),   # Professional Blue
+            'secondary_color': parse_color(os.getenv('AGENCY_SECONDARY_COLOR'), '#f8fafc'), # Light Gray
+            'accent_color': parse_color(os.getenv('AGENCY_ACCENT_COLOR'), '#10b981'),     # Success Green
+            'warning_color': parse_color(os.getenv('AGENCY_WARNING_COLOR'), '#f59e0b'),   # Warning Orange
+            'error_color': parse_color(os.getenv('AGENCY_ERROR_COLOR'), '#ef4444'),       # Error Red
+            'service_colors': {
+                'Content Creation': '#8b5cf6',      # Purple - Creativity
+                'Strategy Planning': '#3b82f6',     # Blue - Trust
+                'Campaign Management': '#f59e0b',   # Orange - Energy
+                'Analytics & Insights': '#10b981',  # Green - Growth
+                'Project Management': '#6366f1',    # Indigo - Organization
+                'Social Media': '#ec4899',          # Pink - Social
+                'SEO & Marketing': '#06b6d4',       # Cyan - Digital
+                'Brand Development': '#84cc16'      # Lime - Innovation
+            },
+            'style_guidelines': (
+                "Modern, clean, and professional marketing agency aesthetic. "
+                "Data-driven approach with creative flair. "
+                "Clear hierarchy and actionable insights. "
+                "Results-oriented with measurable outcomes. "
+                "Client-focused with transparent communication."
+            ),
+            'voice_tone': (
+                "Professional yet approachable. "
+                "Data-driven and results-focused. "
+                "Clear, actionable, and strategic. "
+                "Confident without being arrogant. "
+                "Always providing value and insights."
+            ),
+            'tagline': "AI-Powered Marketing Excellence. Results-Driven. Data-Informed.",
+            'core_values': [
+                "Results Over Rhetoric",
+                "Data-Driven Decisions",
+                "Client Success First",
+                "Innovation Through AI",
+                "Transparent Communication"
+            ]
+        }
+        
+        self.ai_clients = self._initialize_ai_clients()
+        self.knowledge_manager = KnowledgeManager()
+        
+        # ClickUp integration
+        self.clickup_config = {
+            'api_key': os.getenv('CLICKUP_API_KEY'),
+            'team_id': os.getenv('CLICKUP_TEAM_ID'),
+            'base_url': 'https://api.clickup.com/api/v2'
+        }
+        
+        # Project management
+        self.active_projects = {}
+        self.project_channels = {}
+        
+        # Agency DNA for marketing excellence
+        self.agency_dna = """
+        Marketing Pro AI — Complete Marketing Agency Hub
+        
+        Agency Profile:
+        - Mission: Empower marketing teams with AI-driven insights, automated content creation, and intelligent project management.
+        - Vision: Become the most trusted AI-powered marketing partner for agencies and businesses worldwide.
+        - Ideal Clients: Marketing agencies, SMBs, startups, e-commerce businesses, SaaS companies, and enterprise marketing teams.
+        - Service Focus: Content creation, strategy planning, campaign management, analytics, and project coordination.
+        
+        Service Portfolio:
+        1) Content Creation & Management
+           - Blog posts, social media content, email campaigns, ad copy, product descriptions
+           - AI-generated images with Nano Banana integration
+           - SEO-optimized content with keyword research
+           - Multi-platform content adaptation
+        
+        2) Strategy & Planning
+           - Marketing strategy development
+           - Campaign planning and execution
+           - Competitive analysis and market research
+           - ROI optimization and performance tracking
+        
+        3) Campaign Management
+           - Multi-channel campaign orchestration
+           - Automated workflow creation
+           - A/B testing and optimization
+           - Performance monitoring and reporting
+        
+        4) Analytics & Insights
+           - Performance data analysis
+           - ROI calculation and reporting
+           - Trend identification and forecasting
+           - Actionable recommendations
+        
+        5) Project Management Integration
+           - ClickUp task and project management
+           - Automated task creation and updates
+           - Deadline tracking and notifications
+           - Team collaboration and communication
+        
+        AI-Powered Capabilities:
+        - Natural language project management
+        - Intelligent content generation with brand consistency
+        - Automated image creation with professional quality
+        - Data-driven insights and recommendations
+        - Seamless platform integrations
+        
+        Brand Identity:
+        - Palette: Professional Blue (#2563eb), Success Green (#10b981), Warning Orange (#f59e0b)
+        - Style: Modern, clean, data-driven with creative flair
+        - Voice: Professional yet approachable, results-focused, actionable
+        - Approach: AI-enhanced human creativity and strategic thinking
+        
+        Key Differentiators:
+        - Complete marketing workflow automation
+        - AI-powered content creation with professional quality
+        - Integrated project management and task tracking
+        - Real-time analytics and performance insights
+        - Natural language interaction for complex tasks
+        
+        Success Metrics:
+        - Content engagement and conversion rates
+        - Campaign performance and ROI
+        - Project completion and deadline adherence
+        - Client satisfaction and retention
+        - Team productivity and efficiency gains
+        """
+    
+    def _initialize_ai_clients(self):
+        """Initialize AI clients with Nano Banana support"""
+        clients = {}
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        
+        if gemini_key and genai:
+            try:
+                if NANO_BANANA_AVAILABLE and types:
+                    clients['nano_banana'] = genai.Client(api_key=gemini_key)
+                    logger.info("Nano Banana client initialized!")
+                else:
+                    genai.configure(api_key=gemini_key)
+                    clients['gemini'] = genai.GenerativeModel('gemini-1.5-flash')
+                    logger.info("Gemini client initialized")
+            except Exception as e:
+                logger.error(f"Gemini init error: {e}")
+        
+        openai_key = os.getenv('OPENAI_API_KEY')
+        if openai_key and openai:
+            try:
+                clients['openai'] = openai.OpenAI(api_key=openai_key)
+                logger.info("OpenAI client initialized")
+            except Exception as e:
+                logger.error(f"OpenAI init error: {e}")
+        
+        return clients
+    
+    async def _clickup_request(self, endpoint: str, method: str = 'GET', data: dict = None):
+        """Make ClickUp API requests"""
+        if not self.clickup_config['api_key']:
+            return None
+        
+        headers = {
+            'Authorization': self.clickup_config['api_key'],
+            'Content-Type': 'application/json'
+        }
+        
+        url = f"{self.clickup_config['base_url']}/{endpoint}"
+        
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers)
+            elif method == 'POST':
+                response = requests.post(url, headers=headers, json=data)
+            elif method == 'PUT':
+                response = requests.put(url, headers=headers, json=data)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"ClickUp API error: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"ClickUp request error: {e}")
+            return None
+    
+    async def get_clickup_tasks(self, list_id: str = None, assignee: str = None):
+        """Get ClickUp tasks"""
+        endpoint = f"team/{self.clickup_config['team_id']}/task"
+        params = []
+        if list_id:
+            params.append(f"list_ids[]={list_id}")
+        if assignee:
+            params.append(f"assignees[]={assignee}")
+        
+        if params:
+            endpoint += "?" + "&".join(params)
+        
+        return await self._clickup_request(endpoint)
+    
+    async def create_clickup_task(self, list_id: str, name: str, description: str = "", assignee: str = None, due_date: str = None):
+        """Create a new ClickUp task"""
+        data = {
+            "name": name,
+            "description": description,
+            "list_id": list_id
+        }
+        
+        if assignee:
+            data["assignees"] = [assignee]
+        if due_date:
+            data["due_date"] = due_date
+        
+        return await self._clickup_request(f"list/{list_id}/task", 'POST', data)
+    
+    async def create_clickup_list(self, folder_id: str, name: str, description: str = ""):
+        """Create a new ClickUp list"""
+        data = {
+            "name": name,
+            "description": description
+        }
+        
+        return await self._clickup_request(f"folder/{folder_id}/list", 'POST', data)
+    
+    async def analyze_uploaded_file(self, file_content: str, filename: str):
+        """Analyze uploaded file and extract actionable insights"""
+        try:
+            prompt = f"""
+            Analyze this uploaded file: {filename}
+            
+            File Content:
+            {file_content}
+            
+            Please provide:
+            1. **Project Summary**: What is this project about?
+            2. **Key Requirements**: What are the main deliverables and requirements?
+            3. **Timeline**: Any deadlines or milestones mentioned?
+            4. **Stakeholders**: Who are the key people involved?
+            5. **Action Items**: What specific tasks need to be created?
+            6. **Campaign Ideas**: If this is marketing-related, what campaigns could be created?
+            7. **Content Opportunities**: What content pieces could be generated?
+            8. **Wireframe Suggestions**: If applicable, what wireframes or designs are needed?
+            
+            Format your response as a structured analysis that can be used to create ClickUp tasks and Discord project channels.
+            """
+            
+            return await self._get_ai_response(prompt, "Project Analysis Expert")
+        except Exception as e:
+            logger.error(f"File analysis error: {e}")
+            return f"Error analyzing file: {str(e)}"
+    
+    async def create_project_channel(self, guild, project_name: str, project_data: dict):
+        """Create a dedicated Discord channel for a project"""
+        try:
+            # Clean project name for channel
+            channel_name = re.sub(r'[^a-z0-9\-_]', '', project_name.lower().replace(' ', '-'))
+            if len(channel_name) > 50:
+                channel_name = channel_name[:50]
+            
+            # Create text channel
+            channel = await guild.create_text_channel(
+                name=f"project-{channel_name}",
+                topic=f"Project: {project_name} | Created: {datetime.now().strftime('%Y-%m-%d')}"
+            )
+            
+            # Create project info embed
+            embed = discord.Embed(
+                title=f"🚀 Project: {project_name}",
+                description="New project channel created with AI analysis",
+                color=self.agency_config['primary_color']
+            )
+            
+            embed.add_field(
+                name="📋 Project Summary",
+                value=project_data.get('summary', 'Analysis in progress...'),
+                inline=False
+            )
+            
+            embed.add_field(
+                name="⏰ Timeline",
+                value=project_data.get('timeline', 'To be determined'),
+                inline=True
+            )
+            
+            embed.add_field(
+                name="👥 Stakeholders",
+                value=project_data.get('stakeholders', 'To be identified'),
+                inline=True
+            )
+            
+            embed.add_field(
+                name="📝 Next Steps",
+                value="1. Review AI analysis\n2. Create ClickUp tasks\n3. Set up project timeline\n4. Assign team members",
+                inline=False
+            )
+            
+            await channel.send(embed=embed)
+            
+            # Store project info
+            project_id = str(uuid.uuid4())
+            self.active_projects[project_id] = {
+                'name': project_name,
+                'channel_id': channel.id,
+                'data': project_data,
+                'created_at': datetime.now(),
+                'status': 'active'
+            }
+            
+            self.project_channels[channel.id] = project_id
+            
+            return channel, project_id
+            
+        except Exception as e:
+            logger.error(f"Channel creation error: {e}")
+            return None, None
+    
+    async def _generate_nano_banana_image(self, prompt: str, style: str = "professional"):
+        """Generate images using Nano Banana with Modern Weave™ branding"""
+        try:
+            if 'nano_banana' not in self.ai_clients:
+                return {"success": False, "error": "Nano Banana not available"}
+            
+            branded_prompt = f"""
+            Create a professional STAFFVIRTUAL image using Modern Weave™ brand system:
+            
+            Subject: {prompt}
+            Style: {style}, modern, clean, grid-driven aesthetic
+            Brand Colors: SV Blue (#1888FF), Authority Blue (#004B8D), Albatross White (#F8F8EB), Ink Black (#231F20)
+            Design System: Modern Weave™ - modular, grid-driven, rooted in Filipino craftsmanship
+            Photography Style: Bright, documentary-style, showing process and human infrastructure
+            Layout: Grid-first, ample whitespace, decisive hierarchy
+            Quality: Enterprise-grade, suitable for executive presentations and marketing
+            
+            Focus on visual elements that convey STAFFVIRTUAL's expertise in managed virtual teams.
+            Avoid text overlays, clutter, or gimmicks. Clean, professional, trustworthy aesthetic.
+            """
+            
+            response = self.ai_clients['nano_banana'].models.generate_content(
+                model="gemini-2.5-flash-image-preview",
+                contents=[branded_prompt]
+            )
+            
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'inline_data') and part.inline_data is not None:
+                    image_data = part.inline_data.data
+                    
+                    if Image:
+                        image = Image.open(io.BytesIO(image_data))
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                        image.save(temp_file.name, 'PNG')
+                        
+                        return {
+                            "success": True,
+                            "image_path": temp_file.name,
+                            "description": "STAFFVIRTUAL Modern Weave™ branded image generated",
+                            "model": "gemini-2.5-flash-image-preview"
+                        }
+            
+            return {"success": False, "error": "No image data received"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    async def _extract_seo_keywords(self, content: str):
+        """Extract and analyze SEO keywords from content"""
+        try:
+            # Enhanced keyword extraction for virtual staffing
+            words = re.findall(r'\b[a-zA-Z]{3,}\b', content.lower())
+            
+            # STAFFVIRTUAL-specific keywords
+            industry_keywords = [
+                'managed virtual teams', 'offshore CX pod', 'virtual staffing', 'remote team management',
+                'business process outsourcing', 'virtual assistants', 'remote work', 'distributed teams',
+                'enterprise outsourcing', 'virtual talent', 'managed services', 'business efficiency',
+                'scalable operations', 'cost optimization', 'team augmentation', 'offshore development',
+                'customer experience outsourcing', 'marketing operations', 'IT support services',
+                'creative operations', 'growth marketing', 'business automation'
+            ]
+            
+            found_keywords = []
+            for keyword in industry_keywords:
+                if keyword.replace(' ', '') in ' '.join(words) or keyword in content.lower():
+                    found_keywords.append(keyword)
+            
+            return found_keywords[:15]  # Return top 15
+        except:
+            return ['managed virtual teams', 'virtual staffing', 'business efficiency']
+    
+    async def _get_ai_response(self, prompt, system_context="", use_knowledge=True, max_length=None):
+        """Get AI response with enhanced marketing agency context"""
+        try:
+            enhanced_prompt = f"""
+            {self.agency_dna}
+            
+            Your Expert Role: {system_context}
+            
+            User Request: {prompt}
+            
+            Marketing Agency Guidelines:
+            1. Apply professional marketing agency approach with data-driven insights
+            2. Use clear, actionable language that drives results
+            3. Lead with outcomes and measurable metrics; quantify when possible
+            4. Emphasize ROI and performance optimization
+            5. Position as premium AI-powered marketing solution
+            6. Include relevant case studies, benchmarks, and best practices
+            7. For content, aim for comprehensive, SEO-optimized pieces
+            8. Use service-specific colors and branding appropriately
+            9. Maintain professional yet approachable tone
+            10. Always include clear, conversion-focused calls-to-action
+            
+            Create expert-level marketing content that positions our agency as the premium AI-powered choice.
+            """
+            
+            # Try Nano Banana first
+            if 'nano_banana' in self.ai_clients:
+                try:
+                    response = self.ai_clients['nano_banana'].models.generate_content(
+                        model="gemini-2.0-flash-exp",
+                        contents=[enhanced_prompt]
+                    )
+                    result = response.candidates[0].content.parts[0].text
+                    return result[:max_length] + "..." if max_length and len(result) > max_length else result
+                except Exception as e:
+                    logger.error(f"Nano Banana text error: {e}")
+            
+            # Try legacy Gemini
+            if 'gemini' in self.ai_clients:
+                try:
+                    response = self.ai_clients['gemini'].generate_content(enhanced_prompt)
+                    result = response.text
+                    return result[:max_length] + "..." if max_length and len(result) > max_length else result
+                except Exception as e:
+                    logger.error(f"Gemini error: {e}")
+            
+            # Try OpenAI
+            if 'openai' in self.ai_clients:
+                try:
+                    response = self.ai_clients['openai'].chat.completions.create(
+                        model="gpt-4",
+                        messages=[
+                            {"role": "system", "content": self.brand_dna + "\n" + system_context},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=4000  # Increased for longer content
+                    )
+                    result = response.choices[0].message.content
+                    return result[:max_length] + "..." if max_length and len(result) > max_length else result
+                except Exception as e:
+                    logger.error(f"OpenAI error: {e}")
+            
+            return "❌ No AI service available."
+        except Exception as e:
+            return f"❌ Error: {str(e)}"
+    
+    def _add_to_knowledge_base(self, title: str, content: str):
+        """Add to knowledge base"""
+        try:
+            if not hasattr(self, 'knowledge_base'):
+                self.knowledge_base = {"manual_entries": {}, "scraped_content": {}}
+            self.knowledge_base["manual_entries"][title] = {"content": content, "type": "manual"}
+            return True
+        except:
+            return False
+        
+    async def setup_hook(self):
+        logger.info("Setting up STAFFVIRTUAL Enterprise Marketing Suite...")
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"Synced {len(synced)} enterprise agents")
+        except Exception as e:
+            logger.error(f"Sync error: {e}")
+    
+    async def on_ready(self):
+        logger.info(f'{self.user} connected! Marketing Agency AI Hub active')
+        logger.info(f"AI services: {list(self.ai_clients.keys())}")
+        logger.info(f"Nano Banana: {NANO_BANANA_AVAILABLE}")
+        logger.info(f"ClickUp integration: {'✅' if self.clickup_config['api_key'] else '❌'}")
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Marketing Agency operations"))
+
+# Bot instance
+bot = MarketingAgencyBot()
+
+# ===== ENTERPRISE CONTENT CREATION =====
+
+@bot.tree.command(name="content", description="📝 Enterprise blog posts with SEO and paired images")
+async def cmd_content_enterprise(interaction: discord.Interaction, content_type: str, topic: str, keywords: str = "", include_image: bool = True):
+    """Enterprise content creation with Modern Weave™ branding"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        system_context = """
+        You are a senior content strategist and enterprise marketing expert for STAFFVIRTUAL.
+        
+        Expertise:
+        - B2B enterprise content marketing for virtual staffing industry
+        - Modern Weave™ brand system implementation
+        - Executive-level thought leadership content
+        - SEO optimization for enterprise keywords
+        - Competitive positioning against Belay, Time Etc, TaskUs
+        """
+        
+        enhanced_prompt = f"""
+        Create comprehensive {content_type} for STAFFVIRTUAL about: {topic}
+        Target Keywords: {keywords if keywords else 'managed virtual teams, offshore CX pod, enterprise outsourcing, virtual staffing'}
+        
+        ENTERPRISE CONTENT REQUIREMENTS:
+        
+        1. COMPREHENSIVE LENGTH: 2500-4000 words for blog posts
+        2. EXECUTIVE POSITIONING: Target COOs, CTOs, CMOs, Heads of Operations
+        3. MODERN WEAVE™ BRAND INTEGRATION:
+           - Use institutional clarity with cultural warmth
+           - Reference Filipino craftsmanship and heritage
+           - Emphasize managed delivery vs marketplace approach
+           - Include enterprise governance and SLA focus
+        
+        4. ADVANCED SEO STRATEGY:
+           - Primary keyword in title, first 100 words, and conclusion
+           - Secondary keywords naturally integrated throughout
+           - Long-tail enterprise keywords (managed virtual teams, offshore CX pod)
+           - Meta title and description optimized for enterprise search intent
+           - Header structure optimized for featured snippets
+           - Internal linking opportunities to STAFFVIRTUAL service pages
+        
+        5. ENTERPRISE CONTENT STRUCTURE:
+           - Executive Summary (key outcomes and ROI upfront)
+           - Market Context and Industry Challenges
+           - Problem Analysis (enterprise pain points and constraints)
+           - STAFFVIRTUAL Solution Framework (capability towers, engagement models)
+           - Competitive Differentiation (vs Belay, Time Etc, TaskUs)
+           - Implementation Methodology (pod deployment, governance, SLAs)
+           - ROI Analysis and Business Case
+           - Case Study or Success Story (with metrics)
+           - Strategic Recommendations and Next Steps
+           - Executive Call-to-Action (pilot pod, SOW scoping, fit assessment)
+        
+        6. PROOF POINTS TO INCLUDE:
+           - Specific metrics and ROI data
+           - SLA attainment and quality scorecards
+           - Ramp timelines and time-to-productivity
+           - Security and compliance frameworks
+           - Team composition and governance structures
+        
+        Create authoritative, evidence-based content that positions STAFFVIRTUAL as the premium enterprise choice.
+        """
+        
+        # Generate comprehensive content
+        logger.info(f"Generating enterprise content: {topic}")
+        content_result = await bot._get_ai_response(enhanced_prompt, system_context)
+        
+        # Extract enterprise SEO keywords
+        seo_keywords = await bot._extract_seo_keywords(content_result)
+        
+        # Generate Modern Weave™ branded image
+        image_result = None
+        if include_image and NANO_BANANA_AVAILABLE:
+            image_prompt = f"Modern Weave™ branded header image for STAFFVIRTUAL enterprise article about {topic}. Grid-driven layout, Filipino craftsmanship motifs, documentary-style photography. Professional, clean, enterprise-grade visual suitable for executive audiences."
+            image_result = await bot._generate_nano_banana_image(image_prompt, "enterprise")
+        
+        # Create enterprise-grade embed
+        embed = discord.Embed(
+            title="📝 STAFFVIRTUAL Enterprise Content Created!",
+            description=f"**Type:** {content_type}\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**Modern Weave™ Optimized:** ✅",
+            color=bot.brand_config['primary_color']
+        )
+        
+        # Add enterprise SEO analysis
+        if seo_keywords:
+            embed.add_field(
+                name="🔍 Enterprise SEO Keywords",
+                value=", ".join(seo_keywords[:10]),
+                inline=False
+            )
+        
+        # Create comprehensive enterprise content file
+        seo_analysis = f"""
+## Enterprise SEO Analysis
+- **Content Length:** {len(content_result)} characters (Enterprise standard: 2500+ words)
+- **Target Audience:** COOs, CTOs, CMOs, Heads of Operations
+- **Primary Keywords:** {keywords if keywords else 'Enterprise virtual staffing'}
+- **Extracted Keywords:** {', '.join(seo_keywords)}
+- **Brand System:** Modern Weave™ integrated
+- **Competitive Positioning:** vs Belay, Time Etc, TaskUs
+- **Optimization Status:** ✅ Enterprise SEO Optimized
+
+## Modern Weave™ Brand Integration
+- **Voice:** Institutional clarity with cultural warmth
+- **Positioning:** Premium enterprise virtual talent partner
+- **Heritage:** Filipino craftsmanship and respect
+- **Governance:** SLA-driven, QA-managed delivery model
+- **Image Pairing:** {'✅ Modern Weave™ branded image generated' if image_result and image_result.get('success') else '❌ Image generation not available'}
+
+## Enterprise Messaging Framework
+- Outcome-first, evidence-backed content
+- Managed delivery vs marketplace positioning  
+- Enterprise governance and accountability focus
+- Filipino heritage as competitive differentiator
+- Modern Weave™ visual identity integration
+        """
+        
+        full_content = f"# STAFFVIRTUAL Enterprise {content_type.title()}: {topic}\n\n{seo_analysis}\n\n## Executive Content\n\n{content_result}"
+        
+        # Create downloadable enterprise file
+        file_buffer = io.BytesIO(full_content.encode('utf-8'))
+        file = discord.File(file_buffer, filename=f"STAFFVIRTUAL_enterprise_{content_type}_{topic.replace(' ', '_')}.md")
+        
+        # Smart preview handling for enterprise content
+        if len(content_result) > 1000:
+            embed.add_field(name="📋 Executive Summary", value=content_result[:1000], inline=False)
+            if len(content_result) > 2000:
+                embed.add_field(name="📋 Content Preview", value=content_result[1000:2000], inline=False)
+                embed.add_field(name="📄 Complete Enterprise Content", value="See attached file for full article with Modern Weave™ brand analysis", inline=False)
+            else:
+                embed.add_field(name="📋 Content Continuation", value=content_result[1000:], inline=False)
+        else:
+            embed.add_field(name="📋 Complete Content", value=content_result, inline=False)
+        
+        # Send with Modern Weave™ branded image
+        if image_result and image_result.get('success') and image_result.get('image_path'):
+            image_file = discord.File(image_result['image_path'], filename=f"STAFFVIRTUAL_modern_weave_{topic.replace(' ', '_')}.png")
+            embed.set_thumbnail(url=f"attachment://STAFFVIRTUAL_modern_weave_{topic.replace(' ', '_')}.png")
+            embed.add_field(name="🎨 Modern Weave™ Image", value="Enterprise-grade branded header image generated and attached", inline=False)
+            
+            await interaction.followup.send(embed=embed, files=[file, image_file])
+            
+            try:
+                os.unlink(image_result['image_path'])
+            except:
+                pass
+        else:
+            await interaction.followup.send(embed=embed, file=file)
+            
+    except Exception as e:
+        logger.error(f"Enterprise content error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+# Add other essential commands...
+
+@bot.tree.command(name="test", description="🧪 Test enterprise system functionality")
+async def cmd_test(interaction: discord.Interaction):
+    try:
+        embed = discord.Embed(
+            title="✅ STAFFVIRTUAL Enterprise Marketing Suite",
+            description="Modern Weave™ brand system active • Enterprise AI agents ready",
+            color=bot.brand_config['primary_color']
+        )
+        embed.add_field(name="🤖 AI Services", value=f"Available: {list(bot.ai_clients.keys())}", inline=False)
+        embed.add_field(name="🍌 Nano Banana", value=f"{'✅ Available' if NANO_BANANA_AVAILABLE else '❌ Legacy mode'}", inline=False)
+        embed.add_field(name="🎨 Brand System", value="Modern Weave™ • Filipino Heritage • Enterprise Grade", inline=False)
+        embed.add_field(name="🏢 Positioning", value="Premium enterprise virtual talent partner", inline=False)
+        
+        await interaction.response.send_message(embed=embed)
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Test failed: {str(e)}")
+
+# ===== FILE UPLOAD & PROJECT MANAGEMENT =====
+
+@bot.tree.command(name="upload", description="📁 Upload and analyze files to create projects and campaigns")
+async def cmd_upload(interaction: discord.Interaction, file: discord.Attachment):
+    """Upload and analyze files to create projects"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Check file type
+        if not file.filename.endswith(('.md', '.txt', '.docx', '.pdf')):
+            await interaction.followup.send("❌ Please upload .md, .txt, .docx, or .pdf files only.")
+            return
+        
+        # Download and read file
+        file_content = await file.read()
+        
+        if file.filename.endswith('.md') or file.filename.endswith('.txt'):
+            content = file_content.decode('utf-8')
+        else:
+            # For other formats, we'd need additional libraries
+            await interaction.followup.send("⚠️ Currently only .md and .txt files are fully supported. Other formats coming soon!")
+            return
+        
+        # Analyze file
+        analysis = await bot.analyze_uploaded_file(content, file.filename)
+        
+        # Create project channel
+        project_name = file.filename.replace('.md', '').replace('.txt', '').replace('_', ' ').title()
+        channel, project_id = await bot.create_project_channel(
+            interaction.guild, 
+            project_name, 
+            {'summary': analysis[:500] + '...' if len(analysis) > 500 else analysis}
+        )
+        
+        if channel:
+            embed = discord.Embed(
+                title="📁 File Uploaded & Analyzed!",
+                description=f"**File:** {file.filename}\n**Project:** {project_name}\n**Channel:** {channel.mention}",
+                color=bot.agency_config['primary_color']
+            )
+            
+            embed.add_field(
+                name="🔍 AI Analysis",
+                value=analysis[:1000] + "..." if len(analysis) > 1000 else analysis,
+                inline=False
+            )
+            
+            embed.add_field(
+                name="📋 Next Steps",
+                value="1. Review analysis in project channel\n2. Create ClickUp tasks\n3. Set up project timeline\n4. Assign team members",
+                inline=False
+            )
+            
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("❌ Error creating project channel. Please check bot permissions.")
+            
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        await interaction.followup.send(f"❌ Error processing file: {str(e)}")
+
+@bot.tree.command(name="project", description="🚀 Create a new project with ClickUp integration")
+async def cmd_create_project(interaction: discord.Interaction, project_name: str, description: str = ""):
+    """Create a new project"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Create project channel
+        channel, project_id = await bot.create_project_channel(
+            interaction.guild,
+            project_name,
+            {'summary': description, 'timeline': 'To be determined', 'stakeholders': 'To be identified'}
+        )
+        
+        if channel:
+            embed = discord.Embed(
+                title="🚀 New Project Created!",
+                description=f"**Project:** {project_name}\n**Channel:** {channel.mention}",
+                color=bot.agency_config['accent_color']
+            )
+            
+            embed.add_field(
+                name="📝 Description",
+                value=description if description else "No description provided",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="📋 Next Steps",
+                value="1. Set up ClickUp tasks\n2. Define timeline\n3. Assign team members\n4. Create project milestones",
+                inline=False
+            )
+            
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("❌ Error creating project channel. Please check bot permissions.")
+            
+    except Exception as e:
+        logger.error(f"Project creation error: {e}")
+        await interaction.followup.send(f"❌ Error creating project: {str(e)}")
+
+@bot.tree.command(name="clickup", description="📋 ClickUp task management")
+async def cmd_clickup(interaction: discord.Interaction, action: str, task_name: str = "", description: str = ""):
+    """ClickUp task management"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        if action == "list":
+            tasks = await bot.get_clickup_tasks()
+            if tasks and 'tasks' in tasks:
+                embed = discord.Embed(
+                    title="📋 ClickUp Tasks",
+                    description=f"Found {len(tasks['tasks'])} tasks",
+                    color=bot.agency_config['primary_color']
+                )
+                
+                for i, task in enumerate(tasks['tasks'][:10]):  # Show first 10
+                    status = task.get('status', {}).get('status', 'Unknown')
+                    assignee = task.get('assignees', [{}])[0].get('username', 'Unassigned') if task.get('assignees') else 'Unassigned'
+                    
+                    embed.add_field(
+                        name=f"{i+1}. {task.get('name', 'Untitled')}",
+                        value=f"Status: {status} | Assignee: {assignee}",
+                        inline=False
+                    )
+                
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send("❌ No tasks found or ClickUp not configured.")
+        
+        elif action == "create":
+            if not task_name:
+                await interaction.followup.send("❌ Please provide a task name.")
+                return
+            
+            # You'd need to specify a list_id here
+            # For now, we'll show how it would work
+            embed = discord.Embed(
+                title="📝 Task Creation",
+                description="Task creation requires a ClickUp list ID. Use the ClickUp web interface to get the list ID, then we can create tasks programmatically.",
+                color=bot.agency_config['warning_color']
+            )
+            
+            embed.add_field(
+                name="Task Details",
+                value=f"**Name:** {task_name}\n**Description:** {description if description else 'No description'}",
+                inline=False
+            )
+            
+            await interaction.followup.send(embed=embed)
+        
+        else:
+            await interaction.followup.send("❌ Use 'list' or 'create' as the action.")
+            
+    except Exception as e:
+        logger.error(f"ClickUp error: {e}")
+        await interaction.followup.send(f"❌ ClickUp error: {str(e)}")
+
+@bot.tree.command(name="help", description="❓ Show marketing agency AI hub commands")
+async def cmd_help(interaction: discord.Interaction):
+    try:
+        embed = discord.Embed(
+            title="🤖 Marketing Agency AI Hub",
+            description="Complete project management & content creation suite • AI-powered marketing excellence",
+            color=bot.agency_config['primary_color']
+        )
+        
+        embed.add_field(
+            name="🎨 Content Creation",
+            value="• `/content` - Blog posts with SEO + AI images\n• `/image` - Nano Banana image generation",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="📁 Project Management",
+            value="• `/upload` - Upload files to create projects\n• `/project` - Create new project channels\n• `/clickup` - ClickUp task management",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💡 Example Commands",
+            value="`/upload file:project-brief.md`\n`/project project_name:'New Campaign' description:'Q1 marketing campaign'`\n`/clickup action:list`",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="🚀 Features",
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• Complete marketing workflows",
+            inline=False
+        )
+        
+        embed.set_footer(text="AI-Powered Marketing Excellence • Results-Driven • Data-Informed")
+        
+        await interaction.response.send_message(embed=embed)
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {str(e)}")
+
+# Run the bot
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_BOT_TOKEN')
+    if not token:
+        logger.error("DISCORD_BOT_TOKEN not found")
+        exit(1)
+    
+    try:
+        logger.info("Starting STAFFVIRTUAL Enterprise Marketing Suite with Modern Weave™...")
+        bot.run(token)
+    except Exception as e:
+        logger.error(f"Bot startup error: {e}")
+        exit(1)

@@ -1,0 +1,27 @@
+# Core Discord Bot Dependencies
+discord.py==2.3.2
+python-dotenv==1.0.0
+
+# AI Libraries - Conflict resolution approach
+# Use newer OpenAI version that's compatible with google-genai
+openai>=1.50.0
+google-genai>=1.30.0
+
+# Fallback AI library (older, stable)
+google-generativeai==0.8.0
+
+# Basic utilities
+aiohttp==3.9.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+aiofiles==23.2.1
+
+# Image processing for Nano Banana
+Pillow==10.1.0
+
+# Document processing
+PyPDF2==3.0.1
+python-docx==1.1.0
+
+# Force compatible anyio version
+anyio>=4.8.0,<5.0.0
