@@ -786,6 +786,12 @@ class MarketingAgencyBot(commands.Bot):
     async def setup_hook(self):
         logger.info("Setting up Marketing Agency AI Hub...")
         
+        # Debug: Check commands before sync
+        local_commands = self.tree.get_commands()
+        logger.info(f"Local commands before sync: {len(local_commands)}")
+        for cmd in local_commands:
+            logger.info(f"  - /{cmd.name}: {cmd.description}")
+        
         # Clear existing commands and sync new ones
         try:
             # Clear global commands first
@@ -837,6 +843,12 @@ class MarketingAgencyBot(commands.Bot):
             await message.channel.send("Pong! Bot is responding to messages.")
 
 # ===== ENTERPRISE CONTENT CREATION =====
+
+# Test command to verify registration
+@bot.tree.command(name="ping", description="🏓 Test command to verify bot is working")
+async def cmd_ping(interaction: discord.Interaction):
+    """Simple ping command to test if commands are working"""
+    await interaction.response.send_message("🏓 Pong! Bot is working and commands are registered!")
 
 @bot.tree.command(name="content", description="📝 Enterprise blog posts with SEO and paired images")
 async def cmd_content_enterprise(interaction: discord.Interaction, content_type: str, topic: str, keywords: str = "", include_image: bool = True):
@@ -1555,6 +1567,11 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 # Bot instance - created after all commands are defined
 bot = MarketingAgencyBot()
+
+# Debug: Check if commands are registered
+print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
+for cmd in bot.tree.get_commands():
+    print(f"  - /{cmd.name}: {cmd.description}")
 
 # Run the bot
 if __name__ == "__main__":
