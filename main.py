@@ -842,6 +842,10 @@ class MarketingAgencyBot(commands.Bot):
         if message.content.startswith('!ping'):
             await message.channel.send("Pong! Bot is responding to messages.")
 
+# ===== BOT INSTANCE CREATION =====
+# Create bot instance first so commands can reference it
+bot = MarketingAgencyBot()
+
 # ===== ENTERPRISE CONTENT CREATION =====
 
 # Test command to verify registration
@@ -1543,9 +1547,6 @@ async def cmd_help(interaction: discord.Interaction):
             await interaction.response.send_message(f"❌ Error: {str(e)}")
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
-
-# Bot instance - created after all commands are defined
-bot = MarketingAgencyBot()
 
 # Debug: Check if commands are registered
 print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
