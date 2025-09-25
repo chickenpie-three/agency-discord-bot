@@ -1544,6 +1544,14 @@ async def cmd_help(interaction: discord.Interaction):
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
 
+# Bot instance - created after all commands are defined
+bot = MarketingAgencyBot()
+
+# Debug: Check if commands are registered
+print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
+for cmd in bot.tree.get_commands():
+    print(f"  - /{cmd.name}: {cmd.description}")
+
 # Global exception handler
 def handle_exception(exc_type, exc_value, exc_traceback):
     """Global exception handler for unhandled errors"""
@@ -1564,14 +1572,6 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
-
-# Bot instance - created after all commands are defined
-bot = MarketingAgencyBot()
-
-# Debug: Check if commands are registered
-print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
-for cmd in bot.tree.get_commands():
-    print(f"  - /{cmd.name}: {cmd.description}")
 
 # Run the bot
 if __name__ == "__main__":
