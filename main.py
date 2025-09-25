@@ -390,18 +390,18 @@ class MarketingAgencyBot(commands.Bot):
                 return {"success": False, "error": "Nano Banana not available"}
             
             branded_prompt = f"""
-            Create a professional STAFFVIRTUAL image using Modern Weave™ brand system:
+            Create a professional marketing agency image:
             
             Subject: {prompt}
-            Style: {style}, modern, clean, grid-driven aesthetic
-            Brand Colors: SV Blue (#1888FF), Authority Blue (#004B8D), Albatross White (#F8F8EB), Ink Black (#231F20)
-            Design System: Modern Weave™ - modular, grid-driven, rooted in Filipino craftsmanship
-            Photography Style: Bright, documentary-style, showing process and human infrastructure
-            Layout: Grid-first, ample whitespace, decisive hierarchy
-            Quality: Enterprise-grade, suitable for executive presentations and marketing
+            Style: {style}, modern, clean, professional marketing aesthetic
+            Brand Colors: Professional Blue (#2563eb), Success Green (#10b981), Warning Orange (#f59e0b)
+            Design System: Modern, clean, data-driven with creative flair
+            Photography Style: Bright, professional, showing marketing processes and team collaboration
+            Layout: Clean hierarchy, ample whitespace, decisive composition
+            Quality: Professional-grade, suitable for marketing presentations and campaigns
             
-            Focus on visual elements that convey STAFFVIRTUAL's expertise in managed virtual teams.
-            Avoid text overlays, clutter, or gimmicks. Clean, professional, trustworthy aesthetic.
+            Focus on visual elements that convey marketing expertise and professional agency services.
+            Avoid text overlays, clutter, or gimmicks. Clean, professional, results-focused aesthetic.
             """
             
             response = self.ai_clients['nano_banana'].models.generate_content(
@@ -421,7 +421,7 @@ class MarketingAgencyBot(commands.Bot):
                         return {
                             "success": True,
                             "image_path": temp_file.name,
-                            "description": "STAFFVIRTUAL Modern Weave™ branded image generated",
+                            "description": "Professional marketing agency image generated",
                             "model": "gemini-2.5-flash-image-preview"
                         }
             
@@ -432,17 +432,16 @@ class MarketingAgencyBot(commands.Bot):
     async def _extract_seo_keywords(self, content: str):
         """Extract and analyze SEO keywords from content"""
         try:
-            # Enhanced keyword extraction for virtual staffing
+            # Enhanced keyword extraction for marketing agencies
             words = re.findall(r'\b[a-zA-Z]{3,}\b', content.lower())
             
-            # STAFFVIRTUAL-specific keywords
+            # Marketing agency-specific keywords
             industry_keywords = [
-                'managed virtual teams', 'offshore CX pod', 'virtual staffing', 'remote team management',
-                'business process outsourcing', 'virtual assistants', 'remote work', 'distributed teams',
-                'enterprise outsourcing', 'virtual talent', 'managed services', 'business efficiency',
-                'scalable operations', 'cost optimization', 'team augmentation', 'offshore development',
-                'customer experience outsourcing', 'marketing operations', 'IT support services',
-                'creative operations', 'growth marketing', 'business automation'
+                'marketing strategy', 'content creation', 'social media marketing', 'digital marketing',
+                'brand development', 'campaign management', 'SEO optimization', 'paid advertising',
+                'email marketing', 'lead generation', 'conversion optimization', 'marketing automation',
+                'analytics and reporting', 'customer acquisition', 'brand awareness', 'marketing ROI',
+                'content marketing', 'influencer marketing', 'performance marketing', 'growth hacking'
             ]
             
             found_keywords = []
@@ -452,7 +451,7 @@ class MarketingAgencyBot(commands.Bot):
             
             return found_keywords[:15]  # Return top 15
         except:
-            return ['managed virtual teams', 'virtual staffing', 'business efficiency']
+            return ['marketing strategy', 'content creation', 'digital marketing']
     
     async def _get_ai_response(self, prompt, system_context="", use_knowledge=True, max_length=None):
         """Get AI response with enhanced marketing agency context"""
@@ -531,10 +530,10 @@ class MarketingAgencyBot(commands.Bot):
             return False
         
     async def setup_hook(self):
-        logger.info("Setting up STAFFVIRTUAL Enterprise Marketing Suite...")
+        logger.info("Setting up Marketing Agency AI Hub...")
         try:
             synced = await self.tree.sync()
-            logger.info(f"Synced {len(synced)} enterprise agents")
+            logger.info(f"Synced {len(synced)} marketing agents")
         except Exception as e:
             logger.error(f"Sync error: {e}")
     
@@ -618,75 +617,75 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
         # Extract enterprise SEO keywords
         seo_keywords = await bot._extract_seo_keywords(content_result)
         
-        # Generate Modern Weave™ branded image
+        # Generate professional marketing image
         image_result = None
         if include_image and NANO_BANANA_AVAILABLE:
-            image_prompt = f"Modern Weave™ branded header image for STAFFVIRTUAL enterprise article about {topic}. Grid-driven layout, Filipino craftsmanship motifs, documentary-style photography. Professional, clean, enterprise-grade visual suitable for executive audiences."
-            image_result = await bot._generate_nano_banana_image(image_prompt, "enterprise")
+            image_prompt = f"Professional marketing agency header image for article about {topic}. Clean layout, modern marketing aesthetic, professional photography. Professional, clean, marketing-grade visual suitable for business audiences."
+            image_result = await bot._generate_nano_banana_image(image_prompt, "professional")
         
-        # Create enterprise-grade embed
+        # Create professional marketing embed
         embed = discord.Embed(
-            title="📝 STAFFVIRTUAL Enterprise Content Created!",
-            description=f"**Type:** {content_type}\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**Modern Weave™ Optimized:** ✅",
-            color=bot.brand_config['primary_color']
+            title="📝 Marketing Content Created!",
+            description=f"**Type:** {content_type}\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
+            color=bot.agency_config['primary_color']
         )
         
-        # Add enterprise SEO analysis
+        # Add marketing SEO analysis
         if seo_keywords:
             embed.add_field(
-                name="🔍 Enterprise SEO Keywords",
+                name="🔍 Marketing SEO Keywords",
                 value=", ".join(seo_keywords[:10]),
                 inline=False
             )
         
-        # Create comprehensive enterprise content file
+        # Create comprehensive marketing content file
         seo_analysis = f"""
-## Enterprise SEO Analysis
-- **Content Length:** {len(content_result)} characters (Enterprise standard: 2500+ words)
-- **Target Audience:** COOs, CTOs, CMOs, Heads of Operations
-- **Primary Keywords:** {keywords if keywords else 'Enterprise virtual staffing'}
+## Marketing SEO Analysis
+- **Content Length:** {len(content_result)} characters (Professional standard: 2000+ words)
+- **Target Audience:** Marketing professionals, business owners, CMOs
+- **Primary Keywords:** {keywords if keywords else 'Marketing strategy and content'}
 - **Extracted Keywords:** {', '.join(seo_keywords)}
-- **Brand System:** Modern Weave™ integrated
-- **Competitive Positioning:** vs Belay, Time Etc, TaskUs
-- **Optimization Status:** ✅ Enterprise SEO Optimized
+- **Brand System:** Professional marketing agency integrated
+- **Competitive Positioning:** Premium AI-powered marketing solutions
+- **Optimization Status:** ✅ Marketing SEO Optimized
 
-## Modern Weave™ Brand Integration
-- **Voice:** Institutional clarity with cultural warmth
-- **Positioning:** Premium enterprise virtual talent partner
-- **Heritage:** Filipino craftsmanship and respect
-- **Governance:** SLA-driven, QA-managed delivery model
-- **Image Pairing:** {'✅ Modern Weave™ branded image generated' if image_result and image_result.get('success') else '❌ Image generation not available'}
+## Marketing Agency Brand Integration
+- **Voice:** Professional yet approachable, results-focused
+- **Positioning:** Premium AI-powered marketing agency
+- **Approach:** Data-driven with creative flair
+- **Governance:** ROI-focused, performance-driven delivery
+- **Image Pairing:** {'✅ Professional marketing image generated' if image_result and image_result.get('success') else '❌ Image generation not available'}
 
-## Enterprise Messaging Framework
-- Outcome-first, evidence-backed content
-- Managed delivery vs marketplace positioning  
-- Enterprise governance and accountability focus
-- Filipino heritage as competitive differentiator
-- Modern Weave™ visual identity integration
+## Marketing Messaging Framework
+- Results-first, data-backed content
+- AI-enhanced marketing vs traditional approaches
+- Performance optimization and ROI focus
+- Professional expertise as competitive differentiator
+- Modern marketing visual identity integration
         """
         
-        full_content = f"# STAFFVIRTUAL Enterprise {content_type.title()}: {topic}\n\n{seo_analysis}\n\n## Executive Content\n\n{content_result}"
+        full_content = f"# Marketing Agency {content_type.title()}: {topic}\n\n{seo_analysis}\n\n## Professional Content\n\n{content_result}"
         
-        # Create downloadable enterprise file
+        # Create downloadable marketing file
         file_buffer = io.BytesIO(full_content.encode('utf-8'))
-        file = discord.File(file_buffer, filename=f"STAFFVIRTUAL_enterprise_{content_type}_{topic.replace(' ', '_')}.md")
+        file = discord.File(file_buffer, filename=f"Marketing_Agency_{content_type}_{topic.replace(' ', '_')}.md")
         
-        # Smart preview handling for enterprise content
+        # Smart preview handling for marketing content
         if len(content_result) > 1000:
-            embed.add_field(name="📋 Executive Summary", value=content_result[:1000], inline=False)
+            embed.add_field(name="📋 Marketing Summary", value=content_result[:1000], inline=False)
             if len(content_result) > 2000:
                 embed.add_field(name="📋 Content Preview", value=content_result[1000:2000], inline=False)
-                embed.add_field(name="📄 Complete Enterprise Content", value="See attached file for full article with Modern Weave™ brand analysis", inline=False)
+                embed.add_field(name="📄 Complete Marketing Content", value="See attached file for full article with marketing analysis", inline=False)
             else:
                 embed.add_field(name="📋 Content Continuation", value=content_result[1000:], inline=False)
         else:
             embed.add_field(name="📋 Complete Content", value=content_result, inline=False)
         
-        # Send with Modern Weave™ branded image
+        # Send with professional marketing image
         if image_result and image_result.get('success') and image_result.get('image_path'):
-            image_file = discord.File(image_result['image_path'], filename=f"STAFFVIRTUAL_modern_weave_{topic.replace(' ', '_')}.png")
-            embed.set_thumbnail(url=f"attachment://STAFFVIRTUAL_modern_weave_{topic.replace(' ', '_')}.png")
-            embed.add_field(name="🎨 Modern Weave™ Image", value="Enterprise-grade branded header image generated and attached", inline=False)
+            image_file = discord.File(image_result['image_path'], filename=f"Marketing_Agency_{topic.replace(' ', '_')}.png")
+            embed.set_thumbnail(url=f"attachment://Marketing_Agency_{topic.replace(' ', '_')}.png")
+            embed.add_field(name="🎨 Marketing Image", value="Professional marketing header image generated and attached", inline=False)
             
             await interaction.followup.send(embed=embed, files=[file, image_file])
             
@@ -925,7 +924,7 @@ if __name__ == "__main__":
         exit(1)
     
     try:
-        logger.info("Starting STAFFVIRTUAL Enterprise Marketing Suite with Modern Weave™...")
+        logger.info("Starting Marketing Agency AI Hub...")
         bot.run(token)
     except Exception as e:
         logger.error(f"Bot startup error: {e}")
