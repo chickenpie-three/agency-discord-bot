@@ -795,8 +795,11 @@ class MarketingAgencyBot(commands.Bot):
         # Clear existing commands and sync new ones
         try:
             # Clear global commands first
-            await self.tree.clear_commands(guild=None)
-            logger.info("Cleared existing global commands")
+            try:
+                await self.tree.clear_commands(guild=None)
+                logger.info("Cleared existing global commands")
+            except Exception as clear_error:
+                logger.warning(f"Could not clear commands: {clear_error}")
             
             # Sync commands
             synced = await self.tree.sync()
@@ -1397,7 +1400,11 @@ async def cmd_sync(interaction: discord.Interaction):
     
     try:
         # Clear and sync commands
-        await bot.tree.clear_commands(guild=None)
+        try:
+            await bot.tree.clear_commands(guild=None)
+        except Exception as clear_error:
+            logger.warning(f"Could not clear commands: {clear_error}")
+        
         synced = await bot.tree.sync()
         
         embed = discord.Embed(
