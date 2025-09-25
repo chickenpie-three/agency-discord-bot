@@ -1246,7 +1246,10 @@ async def cmd_show_sops(interaction: discord.Interaction):
         await interaction.response.send_message(embed=embed)
         
     except Exception as e:
-        await interaction.response.send_message(f"❌ Error: {str(e)}")
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"❌ Error: {str(e)}")
+        else:
+            await interaction.followup.send(f"❌ Error: {str(e)}")
 
 @bot.tree.command(name="help", description="❓ Show marketing agency AI hub commands")
 async def cmd_help(interaction: discord.Interaction):
@@ -1291,7 +1294,10 @@ async def cmd_help(interaction: discord.Interaction):
         
         await interaction.response.send_message(embed=embed)
     except Exception as e:
-        await interaction.response.send_message(f"❌ Error: {str(e)}")
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"❌ Error: {str(e)}")
+        else:
+            await interaction.followup.send(f"❌ Error: {str(e)}")
 
 # Run the bot
 if __name__ == "__main__":
