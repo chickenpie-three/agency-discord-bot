@@ -128,98 +128,64 @@ class MarketingAgencyBot(commands.Bot):
         self.active_projects = {}
         self.project_channels = {}
         
-        # UAT Testing SOPs
+        # UAT Testing SOPs - Marketing Agency Specific
         self.uat_sops = {
-            "1. Navigation & Menu": [
-                "All navigation links work correctly",
-                "Menu items are clearly labeled and organized",
-                "Breadcrumb navigation is present and functional",
-                "Search functionality works properly",
-                "Mobile navigation is responsive and accessible"
+            "1. Branding Consistency": [
+                "Logo loads correctly (favicon + header logo)",
+                "Color codes match brand guidelines (HEX values)",
+                "Fonts match brand rules (headings vs. body)",
+                "Buttons and CTAs styled consistently",
+                "Brand voice and tone maintained across content"
             ],
-            "2. Page Loading & Performance": [
-                "Pages load within 3 seconds",
-                "Images are optimized and load properly",
-                "No broken images or missing assets",
-                "Page performance scores are acceptable",
-                "Loading states are properly displayed"
+            "2. Page & Layout Verification": [
+                "All navigation links (header/footer) point to correct pages",
+                "Homepage sections (hero, featured content, feeds) render without errors",
+                "Core pages exist (Home, Categories, Article template, Contact, Legal)",
+                "Responsive design check: Desktop → Tablet → Mobile layouts align correctly",
+                "No overlapping elements or broken layouts"
             ],
-            "3. Forms & User Input": [
-                "All form fields are functional",
-                "Form validation works correctly",
-                "Error messages are clear and helpful",
-                "Required fields are properly marked",
-                "Form submission works end-to-end"
+            "3. Content Integrity": [
+                "Article/category pages load without 404s",
+                "Content matches SEO-friendly URL structure",
+                "RSS feeds display fresh articles (not broken)",
+                "Images load correctly with alt text present",
+                "Internal links → No broken or redirecting loops",
+                "External links → Verify reachable"
             ],
-            "4. Content & Copy": [
-                "All text content is readable and error-free",
-                "Headings and subheadings are properly structured",
-                "Content is relevant and up-to-date",
-                "Call-to-action buttons are clear and compelling",
-                "Legal pages (privacy, terms) are present and accessible"
+            "4. Plugin & Feature Functionality": [
+                "Forms: Submit test entries → verify data captured + GHL tagging",
+                "RSS feeds: Populate with correct content",
+                "Ads: Ad Cash zones display correctly (header, sidebar, inline)",
+                "Affiliate links: Redirect through management plugin (e.g., Pretty Links)",
+                "SMTP email: Test site emails send successfully"
             ],
-            "5. Visual Design & Layout": [
-                "Design is consistent across all pages",
-                "Colors, fonts, and spacing are uniform",
-                "Layout is responsive on all device sizes",
-                "Visual hierarchy is clear and logical",
-                "Branding elements are properly implemented"
+            "5. SEO & Analytics": [
+                "Yoast SEO fields populated (title, description, keyphrase)",
+                "Meta description ≤ 160 chars",
+                "Sitemap accessible at /sitemap_index.xml",
+                "Google Analytics (GA4) firing events (pageviews, conversions)",
+                "Google Tag Manager tags working (forms, buttons, opt-ins)"
             ],
-            "6. Functionality & Features": [
-                "All interactive elements work as expected",
-                "Buttons and links respond to user actions",
-                "Dynamic content loads correctly",
-                "User workflows are intuitive and logical",
-                "Error handling is graceful and informative"
+            "6. Performance & Security": [
+                "SSL certificate active (HTTPS enforced)",
+                "Page speed check (LCP, FID, CLS from Core Web Vitals)",
+                "No insecure content warnings (mixed HTTP/HTTPS)",
+                "Security plugins (Wordfence/iThemes) installed & active",
+                "Cookie consent banner appears + functions properly"
             ],
-            "7. Cross-Browser Compatibility": [
-                "Site works in Chrome, Firefox, Safari, Edge",
-                "No layout breaks or functionality issues",
-                "JavaScript works across all browsers",
-                "CSS rendering is consistent",
-                "Browser-specific features are handled properly"
+            "7. Monetization": [
+                "Ads visible on correct zones (home, category, article)",
+                "No broken ad tags or empty containers",
+                "Affiliate CTA buttons/links function",
+                "Newsletter opt-ins trigger correct welcome sequence",
+                "Revenue tracking and conversion funnels working"
             ],
-            "8. Mobile Responsiveness": [
-                "Layout adapts properly to mobile screens",
-                "Touch interactions work correctly",
-                "Text is readable without zooming",
-                "Navigation is thumb-friendly",
-                "Mobile-specific features function properly"
-            ],
-            "9. Accessibility (WCAG)": [
-                "Alt text is provided for all images",
-                "Color contrast meets accessibility standards",
-                "Keyboard navigation works throughout",
-                "Screen reader compatibility is maintained",
-                "Focus indicators are visible and clear"
-            ],
-            "10. Security & Privacy": [
-                "HTTPS is properly implemented",
-                "Contact forms use secure submission",
-                "No sensitive data is exposed in URLs",
-                "Privacy policy is accessible and current",
-                "Cookie consent is properly implemented"
-            ],
-            "11. SEO & Meta Tags": [
-                "Page titles are unique and descriptive",
-                "Meta descriptions are present and compelling",
-                "Header tags (H1, H2, H3) are properly structured",
-                "URLs are clean and SEO-friendly",
-                "Schema markup is implemented where appropriate"
-            ],
-            "12. Analytics & Tracking": [
-                "Analytics tracking is properly implemented",
-                "Conversion tracking is set up correctly",
-                "Event tracking works for key interactions",
-                "Goal funnels are properly configured",
-                "Data collection complies with privacy regulations"
-            ],
-            "13. Error Handling & Edge Cases": [
-                "404 pages are custom and helpful",
-                "Server errors are handled gracefully",
-                "Empty states are properly designed",
-                "Offline functionality works where applicable",
-                "Edge cases are handled without breaking the site"
+            "8. Social & Integrations": [
+                "Social media icons → point to correct branded accounts",
+                "Embedded social feeds (if any) display without error",
+                "Forms → check data reaches GoHighLevel CRM",
+                "Emails → verify autoresponder sequence fires",
+                "Third-party integrations functioning properly"
             ]
         }
         
@@ -528,10 +494,10 @@ class MarketingAgencyBot(commands.Bot):
             return {"error": f"Analysis error: {str(e)}"}
     
     async def generate_uat_report(self, website_data: dict, custom_notes: str = ""):
-        """Generate comprehensive UAT testing report"""
+        """Generate comprehensive UAT testing report following 8-step workflow"""
         try:
             prompt = f"""
-            Generate a comprehensive UAT (User Acceptance Testing) report for this website:
+            Generate a comprehensive UAT (User Acceptance Testing) report for this website following the 8-step bot workflow:
             
             Website Data:
             - URL: {website_data.get('url', 'N/A')}
@@ -547,32 +513,60 @@ class MarketingAgencyBot(commands.Bot):
             
             Custom Notes: {custom_notes if custom_notes else 'None provided'}
             
-            Please provide a detailed UAT report covering all 13 SOP categories:
+            Please provide a detailed UAT report following this 8-step workflow:
             
-            1. **Navigation & Menu** - Test navigation functionality
-            2. **Page Loading & Performance** - Analyze loading times and performance
-            3. **Forms & User Input** - Check form functionality and validation
-            4. **Content & Copy** - Review content quality and structure
-            5. **Visual Design & Layout** - Assess design consistency and layout
-            6. **Functionality & Features** - Test interactive elements
-            7. **Cross-Browser Compatibility** - Note browser compatibility issues
-            8. **Mobile Responsiveness** - Check mobile optimization
-            9. **Accessibility (WCAG)** - Review accessibility compliance
-            10. **Security & Privacy** - Assess security measures
-            11. **SEO & Meta Tags** - Check SEO optimization
-            12. **Analytics & Tracking** - Note tracking implementation
-            13. **Error Handling & Edge Cases** - Test error scenarios
+            **STEP 1: Site Crawl & Page Detection**
+            - Detect missing/broken pages (404/500 errors)
+            - Verify core pages exist (Home, Categories, Articles, Contact, Legal)
+            - Check for broken internal links and redirects
             
-            For each category, provide:
+            **STEP 2: Branding Rules Validation**
+            - Validate colors, logos, fonts against brand guidelines
+            - Check HEX color codes and font consistency
+            - Verify favicon and header logo loading
+            
+            **STEP 3: Layout Tests (Mobile-First)**
+            - Screen-size rendering: Desktop → Tablet → Mobile
+            - No overlapping elements or broken layouts
+            - Responsive design verification
+            
+            **STEP 4: Automated SEO Scan**
+            - Verify titles, meta descriptions (≤160 chars)
+            - Check sitemap accessibility (/sitemap_index.xml)
+            - SEO-friendly URL structure validation
+            
+            **STEP 5: Form Submission Test**
+            - Push dummy data, confirm GHL tagging
+            - Verify data reaches GoHighLevel CRM
+            - Test SMTP email functionality
+            
+            **STEP 6: Analytics Ping Test**
+            - Confirm GA4 + GTM tags fire correctly
+            - Verify pageviews and conversion tracking
+            - Check event tracking for forms and buttons
+            
+            **STEP 7: Ad & Affiliate Check**
+            - Confirm ad tags render in correct zones
+            - Verify affiliate links redirect properly
+            - Check monetization elements function
+            
+            **STEP 8: Security & Compliance**
+            - SSL certificate and HTTPS enforcement
+            - Cookie consent banner functionality
+            - GDPR compliance verification
+            
+            For each of the 8 SOP categories, provide:
             - ✅ **PASS** - What's working well
-            - ⚠️ **WARNING** - Areas that need attention
+            - ⚠️ **WARNING** - Areas that need attention  
             - ❌ **FAIL** - Critical issues that must be fixed
             - 📝 **RECOMMENDATIONS** - Specific improvement suggestions
             
-            Format as a professional UAT report with clear sections and actionable insights.
+            Focus on marketing agency priorities: branding consistency, conversion optimization, analytics tracking, and monetization elements.
+            
+            Format as a professional UAT report with clear sections and actionable insights for marketing teams.
             """
             
-            return await self._get_ai_response(prompt, "UAT Testing Expert")
+            return await self._get_ai_response(prompt, "Marketing UAT Testing Expert")
             
         except Exception as e:
             logger.error(f"UAT report generation error: {e}")
@@ -1149,12 +1143,12 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
             )
         
         # Add SOP checklist
-        sop_summary = "**13 SOP Categories Tested:**\n"
+        sop_summary = "**8 SOP Categories Tested:**\n"
         for sop_name in bot.uat_sops.keys():
             sop_summary += f"• {sop_name}\n"
         
-        report_embed.add_field(
-            name="✅ SOP Checklist",
+        embed.add_field(
+            name="✅ 8 SOP Categories Tested",
             value=sop_summary,
             inline=False
         )
@@ -1180,16 +1174,44 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
 ## Custom Notes
 {custom_notes if custom_notes else 'No custom notes provided'}
 
-## UAT Testing Report
+## UAT Testing Report (8-Step Workflow)
 {uat_report}
 
-## 13 SOP Categories Tested
+## 8 Marketing Agency SOP Categories Tested
 """
         
         for sop_name, sop_items in bot.uat_sops.items():
             full_report += f"\n### {sop_name}\n"
             for item in sop_items:
                 full_report += f"- {item}\n"
+        
+        # Add file storage information
+        full_report += f"""
+
+## File Storage & Data Management
+
+### Where Files Are Saved:
+- **Discord Channel:** This report is posted in the current Discord channel
+- **Downloadable File:** This markdown file can be downloaded directly from Discord
+- **Local Storage:** Reports are temporarily stored in memory during bot operation
+- **No Permanent Storage:** The bot does not permanently store UAT reports on the server
+
+### Data Retention:
+- **Temporary:** UAT analysis data is held in memory only during the testing session
+- **Downloadable:** Users can download the complete report as a markdown file
+- **No Database:** No UAT data is stored in databases or external systems
+- **Privacy:** All analysis is performed in real-time without data persistence
+
+### Recommended Storage:
+- **Client Folders:** Save downloaded reports in organized client project folders
+- **Documentation:** Use reports for client deliverables and project documentation
+- **Version Control:** Track UAT reports as part of project version control
+- **Backup:** Maintain copies of important UAT reports in your preferred storage system
+
+---
+*Report generated by Marketing Agency AI Hub UAT Testing Agent*
+*Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+"""
         
         # Create downloadable file
         file_buffer = io.BytesIO(full_report.encode('utf-8'))
@@ -1201,13 +1223,13 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
         logger.error(f"UAT testing error: {e}")
         await interaction.followup.send(f"❌ UAT testing error: {str(e)}")
 
-@bot.tree.command(name="sops", description="📋 Show the 13 UAT Testing SOPs")
+@bot.tree.command(name="sops", description="📋 Show the 8 UAT Testing SOPs")
 async def cmd_show_sops(interaction: discord.Interaction):
-    """Show the 13 UAT Testing SOPs"""
+    """Show the 8 UAT Testing SOPs"""
     try:
         embed = discord.Embed(
             title="📋 UAT Testing SOPs",
-            description="13 Standard Operating Procedures for website testing",
+            description="8 Marketing Agency Standard Operating Procedures for website testing",
             color=bot.agency_config['primary_color']
         )
         
@@ -1249,7 +1271,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🧪 UAT Testing Agent",
-            value="• `/uat` - Test websites against 13 SOPs\n• `/sops` - Show the 13 UAT Testing SOPs",
+            value="• `/uat` - Test websites against 8 Marketing SOPs\n• `/sops` - Show the 8 UAT Testing SOPs",
             inline=False
         )
         
@@ -1261,7 +1283,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 13 SOPs\n• Complete marketing workflows",
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows",
             inline=False
         )
         
