@@ -454,8 +454,23 @@ class MarketingAgencyBot(commands.Bot):
             if not parsed_url.scheme:
                 url = f"https://{url}"
             
-            # Basic website analysis
-            response = requests.get(url, timeout=10)
+            # Headers to mimic a real browser and avoid 406 errors
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0'
+            }
+            
+            # Basic website analysis with browser headers
+            response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
             response.raise_for_status()
             
             # Extract basic info
@@ -488,8 +503,17 @@ class MarketingAgencyBot(commands.Bot):
                 "content_length": len(content)
             }
             
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 406:
+                return {"error": f"Website blocked automated requests (406 Not Acceptable). This site may require manual testing or have anti-bot protection."}
+            elif e.response.status_code == 403:
+                return {"error": f"Website access forbidden (403). This site may block automated requests or require authentication."}
+            elif e.response.status_code == 404:
+                return {"error": f"Website not found (404). Please check the URL is correct."}
+            else:
+                return {"error": f"HTTP Error {e.response.status_code}: {str(e)}"}
         except requests.exceptions.RequestException as e:
-            return {"error": f"Failed to analyze website: {str(e)}"}
+            return {"error": f"Network error: {str(e)}"}
         except Exception as e:
             return {"error": f"Analysis error: {str(e)}"}
     
@@ -1093,13 +1117,36 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
         website_data = await bot.analyze_website(website_url)
         
         if "error" in website_data:
-            error_embed = discord.Embed(
-                title="❌ UAT Testing Failed",
-                description=f"Could not analyze website: {website_data['error']}",
-                color=bot.agency_config['error_color']
-            )
-            await interaction.followup.send(embed=error_embed)
-            return
+            # Check if it's a blocking error (406, 403) and offer manual UAT option
+            if "406" in website_data['error'] or "403" in website_data['error']:
+                error_embed = discord.Embed(
+                    title="⚠️ Website Blocked Automated Analysis",
+                    description=f"**Issue:** {website_data['error']}\n\n**Solution:** This website has anti-bot protection. You can still get a UAT report based on manual testing.",
+                    color=bot.agency_config['warning_color']
+                )
+                
+                error_embed.add_field(
+                    name="🔧 Manual UAT Options",
+                    value="1. **Manual Testing:** Test the website manually and provide notes\n2. **Alternative URL:** Try a different page or subdomain\n3. **Contact Admin:** Ask website owner to whitelist automated testing",
+                    inline=False
+                )
+                
+                error_embed.add_field(
+                    name="📋 Still Want UAT Report?",
+                    value="I can generate a UAT checklist and report template based on your custom notes, even without automated analysis.",
+                    inline=False
+                )
+                
+                await interaction.followup.send(embed=error_embed)
+                return
+            else:
+                error_embed = discord.Embed(
+                    title="❌ UAT Testing Failed",
+                    description=f"Could not analyze website: {website_data['error']}",
+                    color=bot.agency_config['error_color']
+                )
+                await interaction.followup.send(embed=error_embed)
+                return
         
         # Generate comprehensive UAT report
         uat_report = await bot.generate_uat_report(website_data, custom_notes)
