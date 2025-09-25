@@ -117,7 +117,7 @@ class MarketingAgencyBot(commands.Bot):
         
         # ClickUp integration
         self.clickup_config = {
-            'api_key': os.getenv('CLICKUP_API_KEY'),
+            'api_key': os.getenv('CLICKUP_TOKEN') or os.getenv('CLICKUP_API_KEY'),
             'team_id': os.getenv('CLICKUP_TEAM_ID'),
             'base_url': 'https://api.clickup.com/api/v2'
         }
@@ -556,19 +556,19 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
     
     try:
         system_context = """
-        You are a senior content strategist and enterprise marketing expert for STAFFVIRTUAL.
+        You are a senior content strategist and marketing expert for a professional marketing agency.
         
         Expertise:
-        - B2B enterprise content marketing for virtual staffing industry
-        - Modern Weave™ brand system implementation
+        - B2B marketing content creation and strategy
+        - Professional marketing agency brand implementation
         - Executive-level thought leadership content
-        - SEO optimization for enterprise keywords
-        - Competitive positioning against Belay, Time Etc, TaskUs
+        - SEO optimization for marketing keywords
+        - Competitive positioning in the marketing services industry
         """
         
         enhanced_prompt = f"""
-        Create comprehensive {content_type} for STAFFVIRTUAL about: {topic}
-        Target Keywords: {keywords if keywords else 'managed virtual teams, offshore CX pod, enterprise outsourcing, virtual staffing'}
+        Create comprehensive {content_type} for our marketing agency about: {topic}
+        Target Keywords: {keywords if keywords else 'marketing strategy, content creation, digital marketing, brand development'}
         
         ENTERPRISE CONTENT REQUIREMENTS:
         
@@ -586,13 +586,13 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
            - Long-tail enterprise keywords (managed virtual teams, offshore CX pod)
            - Meta title and description optimized for enterprise search intent
            - Header structure optimized for featured snippets
-           - Internal linking opportunities to STAFFVIRTUAL service pages
+           - Internal linking opportunities to marketing agency service pages
         
         5. ENTERPRISE CONTENT STRUCTURE:
            - Executive Summary (key outcomes and ROI upfront)
            - Market Context and Industry Challenges
            - Problem Analysis (enterprise pain points and constraints)
-           - STAFFVIRTUAL Solution Framework (capability towers, engagement models)
+           - Marketing Agency Solution Framework (service offerings, engagement models)
            - Competitive Differentiation (vs Belay, Time Etc, TaskUs)
            - Implementation Methodology (pod deployment, governance, SLAs)
            - ROI Analysis and Business Case
@@ -607,7 +607,7 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
            - Security and compliance frameworks
            - Team composition and governance structures
         
-        Create authoritative, evidence-based content that positions STAFFVIRTUAL as the premium enterprise choice.
+        Create authoritative, evidence-based content that positions our marketing agency as the premium choice.
         """
         
         # Generate comprehensive content
@@ -706,14 +706,14 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
 async def cmd_test(interaction: discord.Interaction):
     try:
         embed = discord.Embed(
-            title="✅ STAFFVIRTUAL Enterprise Marketing Suite",
-            description="Modern Weave™ brand system active • Enterprise AI agents ready",
+            title="✅ Marketing Agency AI Hub",
+            description="Professional marketing agency system active • AI agents ready",
             color=bot.brand_config['primary_color']
         )
         embed.add_field(name="🤖 AI Services", value=f"Available: {list(bot.ai_clients.keys())}", inline=False)
         embed.add_field(name="🍌 Nano Banana", value=f"{'✅ Available' if NANO_BANANA_AVAILABLE else '❌ Legacy mode'}", inline=False)
-        embed.add_field(name="🎨 Brand System", value="Modern Weave™ • Filipino Heritage • Enterprise Grade", inline=False)
-        embed.add_field(name="🏢 Positioning", value="Premium enterprise virtual talent partner", inline=False)
+        embed.add_field(name="🎨 Brand System", value="Professional Marketing Agency • AI-Powered • Results-Driven", inline=False)
+        embed.add_field(name="🏢 Positioning", value="Premium AI-powered marketing agency", inline=False)
         
         await interaction.response.send_message(embed=embed)
     except Exception as e:
