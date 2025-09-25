@@ -14,6 +14,9 @@ import aiofiles
 import uuid
 from urllib.parse import urlparse
 import asyncio
+import signal
+import sys
+import traceback
 
 # AI Libraries with Nano Banana support
 try:
@@ -127,6 +130,11 @@ class MarketingAgencyBot(commands.Bot):
         # Project management
         self.active_projects = {}
         self.project_channels = {}
+        
+        # Stability monitoring
+        self.start_time = datetime.now()
+        self.error_count = 0
+        self.max_errors = 10
         
         # UAT Testing SOPs - Marketing Agency Specific
         self.uat_sops = {
@@ -594,7 +602,40 @@ class MarketingAgencyBot(commands.Bot):
             
         except Exception as e:
             logger.error(f"UAT report generation error: {e}")
+            self.error_count += 1
             return f"Error generating UAT report: {str(e)}"
+    
+    def track_error(self, error_msg: str):
+        """Track errors and handle cleanup if too many occur"""
+        self.error_count += 1
+        logger.error(f"Error #{self.error_count}: {error_msg}")
+        
+        if self.error_count >= self.max_errors:
+            logger.critical(f"Too many errors ({self.error_count}), considering restart...")
+            # Could implement auto-restart logic here if needed
+    
+    def cleanup_memory(self):
+        """Clean up memory and reset error count"""
+        try:
+            # Clear old project data if too many
+            if len(self.active_projects) > 50:
+                # Keep only recent projects
+                sorted_projects = sorted(self.active_projects.items(), 
+                                       key=lambda x: x[1].get('created_at', datetime.min), 
+                                       reverse=True)
+                self.active_projects = dict(sorted_projects[:25])
+                logger.info("Cleaned up old project data")
+            
+            # Reset error count periodically
+            if self.error_count > 0:
+                self.error_count = max(0, self.error_count - 1)
+                
+        except Exception as e:
+            logger.error(f"Memory cleanup error: {e}")
+    
+    def get_uptime(self):
+        """Get bot uptime"""
+        return datetime.now() - self.start_time
     
     async def _generate_nano_banana_image(self, prompt: str, style: str = "professional"):
         """Generate images using Nano Banana with Modern Weave™ branding"""
@@ -1298,6 +1339,75 @@ async def cmd_show_sops(interaction: discord.Interaction):
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
 
+@bot.tree.command(name="status", description="📊 Show bot status and health information")
+async def cmd_status(interaction: discord.Interaction):
+    """Show bot status and health information"""
+    try:
+        uptime = bot.get_uptime()
+        uptime_str = f"{uptime.days}d {uptime.seconds//3600}h {(uptime.seconds//60)%60}m"
+        
+        embed = discord.Embed(
+            title="📊 Bot Status & Health",
+            description="Marketing Agency AI Hub system information",
+            color=bot.agency_config['accent_color']
+        )
+        
+        embed.add_field(
+            name="⏱️ Uptime",
+            value=uptime_str,
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🔧 Error Count",
+            value=f"{bot.error_count}/{bot.max_errors}",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📁 Active Projects",
+            value=str(len(bot.active_projects)),
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🤖 AI Services",
+            value=f"Available: {len(bot.ai_clients)}",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🔗 ClickUp Integration",
+            value="✅ Connected" if bot.clickup_config['api_key'] else "❌ Disconnected",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🎨 Nano Banana",
+            value="✅ Active" if 'nano_banana' in bot.ai_clients else "❌ Inactive",
+            inline=True
+        )
+        
+        # Memory usage info
+        import psutil
+        memory = psutil.virtual_memory()
+        embed.add_field(
+            name="💾 Memory Usage",
+            value=f"{memory.percent}% ({memory.used // 1024 // 1024}MB / {memory.total // 1024 // 1024}MB)",
+            inline=False
+        )
+        
+        embed.set_footer(text="Bot Health Monitor • Last updated")
+        embed.timestamp = datetime.now()
+        
+        await interaction.response.send_message(embed=embed)
+        
+    except Exception as e:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"❌ Status error: {str(e)}")
+        else:
+            await interaction.followup.send(f"❌ Status error: {str(e)}")
+
 @bot.tree.command(name="help", description="❓ Show marketing agency AI hub commands")
 async def cmd_help(interaction: discord.Interaction):
     try:
@@ -1326,6 +1436,12 @@ async def cmd_help(interaction: discord.Interaction):
         )
         
         embed.add_field(
+            name="📊 System Monitoring",
+            value="• `/status` - Show bot health and system information",
+            inline=False
+        )
+        
+        embed.add_field(
             name="💡 Example Commands",
             value="`/upload file:project-brief.md`\n`/project project_name:'New Campaign' description:'Q1 marketing campaign'`\n`/clickup action:list`\n`/uat website_url:https://example.com custom_notes:'Test for mobile responsiveness'`",
             inline=False
@@ -1346,16 +1462,60 @@ async def cmd_help(interaction: discord.Interaction):
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
 
+# Global exception handler
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """Global exception handler for unhandled errors"""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    
+    logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+# Set global exception handler
+sys.excepthook = handle_exception
+
+# Signal handlers for graceful shutdown
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    logger.info(f"Received signal {signum}, shutting down gracefully...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
 # Run the bot
 if __name__ == "__main__":
-    token = os.getenv('DISCORD_BOT_TOKEN')
-    if not token:
-        logger.error("DISCORD_BOT_TOKEN not found")
-        exit(1)
-    
     try:
-        logger.info("Starting Marketing Agency AI Hub...")
-        bot.run(token)
+        # Validate environment variables
+        required_vars = ['DISCORD_BOT_TOKEN', 'GEMINI_API_KEY']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        
+        if missing_vars:
+            logger.error(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+            print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+            sys.exit(1)
+        
+        token = os.getenv('DISCORD_BOT_TOKEN')
+        logger.info("✅ All required environment variables found")
+        
+        bot = MarketingAgencyBot()
+        
+        # Add error handling for bot startup
+        try:
+            logger.info("Starting Marketing Agency AI Hub...")
+            bot.run(token)
+        except discord.errors.LoginFailure:
+            logger.error("❌ Invalid Discord bot token!")
+            print("❌ Invalid Discord bot token! Check your DISCORD_BOT_TOKEN environment variable.")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"❌ Bot startup error: {e}")
+            logger.error(traceback.format_exc())
+            print(f"❌ Bot startup error: {e}")
+            sys.exit(1)
+            
     except Exception as e:
-        logger.error(f"Bot startup error: {e}")
-        exit(1)
+        logger.error(f"❌ Critical startup error: {e}")
+        logger.error(traceback.format_exc())
+        print(f"❌ Critical startup error: {e}")
+        sys.exit(1)
