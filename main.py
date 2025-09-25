@@ -836,9 +836,6 @@ class MarketingAgencyBot(commands.Bot):
         if message.content.startswith('!ping'):
             await message.channel.send("Pong! Bot is responding to messages.")
 
-# Bot instance
-bot = MarketingAgencyBot()
-
 # ===== ENTERPRISE CONTENT CREATION =====
 
 @bot.tree.command(name="content", description="📝 Enterprise blog posts with SEO and paired images")
@@ -1556,6 +1553,9 @@ def signal_handler(signum, frame):
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
+# Bot instance - created after all commands are defined
+bot = MarketingAgencyBot()
+
 # Run the bot
 if __name__ == "__main__":
     try:
@@ -1570,8 +1570,6 @@ if __name__ == "__main__":
         
         token = os.getenv('DISCORD_BOT_TOKEN')
         logger.info("✅ All required environment variables found")
-        
-        bot = MarketingAgencyBot()
         
         # Add error handling for bot startup
         try:
