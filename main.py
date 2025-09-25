@@ -785,18 +785,56 @@ class MarketingAgencyBot(commands.Bot):
         
     async def setup_hook(self):
         logger.info("Setting up Marketing Agency AI Hub...")
+        
+        # Clear existing commands and sync new ones
         try:
+            # Clear global commands first
+            await self.tree.clear_commands(guild=None)
+            logger.info("Cleared existing global commands")
+            
+            # Sync commands
             synced = await self.tree.sync()
             logger.info(f"Synced {len(synced)} marketing agents")
+            
+            # Log all synced commands
+            for cmd in synced:
+                logger.info(f"✅ Synced command: /{cmd.name}")
+                
         except Exception as e:
-            logger.error(f"Sync error: {e}")
+            logger.error(f"Command sync error: {e}")
+            # Try to sync anyway
+            try:
+                synced = await self.tree.sync()
+                logger.info(f"Fallback sync completed: {len(synced)} commands")
+            except Exception as e2:
+                logger.error(f"Fallback sync failed: {e2}")
     
     async def on_ready(self):
         logger.info(f'{self.user} connected! Marketing Agency AI Hub active')
         logger.info(f"AI services: {list(self.ai_clients.keys())}")
         logger.info(f"Nano Banana: {NANO_BANANA_AVAILABLE}")
         logger.info(f"ClickUp integration: {'✅' if self.clickup_config['api_key'] else '❌'}")
+        
+        # Force command sync on ready
+        try:
+            synced = await self.tree.sync()
+            logger.info(f"✅ Commands synced on ready: {len(synced)} commands available")
+        except Exception as e:
+            logger.error(f"Ready sync error: {e}")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Marketing Agency operations"))
+    
+    async def on_message(self, message):
+        """Handle messages for debugging"""
+        if message.author.bot:
+            return
+        
+        # Debug command visibility
+        if message.content.startswith('!debug'):
+            await message.channel.send(f"Bot is online! Commands should be available. Try `/help` or `/sync`")
+        
+        # Check if bot can see the message
+        if message.content.startswith('!ping'):
+            await message.channel.send("Pong! Bot is responding to messages.")
 
 # Bot instance
 bot = MarketingAgencyBot()
@@ -1339,6 +1377,41 @@ async def cmd_show_sops(interaction: discord.Interaction):
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
 
+@bot.tree.command(name="sync", description="🔄 Force sync Discord commands")
+async def cmd_sync(interaction: discord.Interaction):
+    """Force sync Discord commands"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Clear and sync commands
+        await bot.tree.clear_commands(guild=None)
+        synced = await bot.tree.sync()
+        
+        embed = discord.Embed(
+            title="🔄 Commands Synced Successfully",
+            description=f"Synced {len(synced)} commands to Discord",
+            color=bot.agency_config['accent_color']
+        )
+        
+        # List all synced commands
+        command_list = "\n".join([f"• `/{cmd.name}`" for cmd in synced])
+        embed.add_field(
+            name="📋 Available Commands",
+            value=command_list,
+            inline=False
+        )
+        
+        embed.add_field(
+            name="⏱️ Note",
+            value="Commands may take up to 1 hour to appear globally. Try using them in the current server first.",
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed)
+        
+    except Exception as e:
+        await interaction.followup.send(f"❌ Sync error: {str(e)}")
+
 @bot.tree.command(name="status", description="📊 Show bot status and health information")
 async def cmd_status(interaction: discord.Interaction):
     """Show bot status and health information"""
@@ -1437,7 +1510,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="📊 System Monitoring",
-            value="• `/status` - Show bot health and system information",
+            value="• `/status` - Show bot health and system information\n• `/sync` - Force sync Discord commands",
             inline=False
         )
         
