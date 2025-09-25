@@ -12,6 +12,8 @@ import requests
 from datetime import datetime, timedelta
 import aiofiles
 import uuid
+from urllib.parse import urlparse
+import asyncio
 
 # AI Libraries with Nano Banana support
 try:
@@ -125,6 +127,101 @@ class MarketingAgencyBot(commands.Bot):
         # Project management
         self.active_projects = {}
         self.project_channels = {}
+        
+        # UAT Testing SOPs
+        self.uat_sops = {
+            "1. Navigation & Menu": [
+                "All navigation links work correctly",
+                "Menu items are clearly labeled and organized",
+                "Breadcrumb navigation is present and functional",
+                "Search functionality works properly",
+                "Mobile navigation is responsive and accessible"
+            ],
+            "2. Page Loading & Performance": [
+                "Pages load within 3 seconds",
+                "Images are optimized and load properly",
+                "No broken images or missing assets",
+                "Page performance scores are acceptable",
+                "Loading states are properly displayed"
+            ],
+            "3. Forms & User Input": [
+                "All form fields are functional",
+                "Form validation works correctly",
+                "Error messages are clear and helpful",
+                "Required fields are properly marked",
+                "Form submission works end-to-end"
+            ],
+            "4. Content & Copy": [
+                "All text content is readable and error-free",
+                "Headings and subheadings are properly structured",
+                "Content is relevant and up-to-date",
+                "Call-to-action buttons are clear and compelling",
+                "Legal pages (privacy, terms) are present and accessible"
+            ],
+            "5. Visual Design & Layout": [
+                "Design is consistent across all pages",
+                "Colors, fonts, and spacing are uniform",
+                "Layout is responsive on all device sizes",
+                "Visual hierarchy is clear and logical",
+                "Branding elements are properly implemented"
+            ],
+            "6. Functionality & Features": [
+                "All interactive elements work as expected",
+                "Buttons and links respond to user actions",
+                "Dynamic content loads correctly",
+                "User workflows are intuitive and logical",
+                "Error handling is graceful and informative"
+            ],
+            "7. Cross-Browser Compatibility": [
+                "Site works in Chrome, Firefox, Safari, Edge",
+                "No layout breaks or functionality issues",
+                "JavaScript works across all browsers",
+                "CSS rendering is consistent",
+                "Browser-specific features are handled properly"
+            ],
+            "8. Mobile Responsiveness": [
+                "Layout adapts properly to mobile screens",
+                "Touch interactions work correctly",
+                "Text is readable without zooming",
+                "Navigation is thumb-friendly",
+                "Mobile-specific features function properly"
+            ],
+            "9. Accessibility (WCAG)": [
+                "Alt text is provided for all images",
+                "Color contrast meets accessibility standards",
+                "Keyboard navigation works throughout",
+                "Screen reader compatibility is maintained",
+                "Focus indicators are visible and clear"
+            ],
+            "10. Security & Privacy": [
+                "HTTPS is properly implemented",
+                "Contact forms use secure submission",
+                "No sensitive data is exposed in URLs",
+                "Privacy policy is accessible and current",
+                "Cookie consent is properly implemented"
+            ],
+            "11. SEO & Meta Tags": [
+                "Page titles are unique and descriptive",
+                "Meta descriptions are present and compelling",
+                "Header tags (H1, H2, H3) are properly structured",
+                "URLs are clean and SEO-friendly",
+                "Schema markup is implemented where appropriate"
+            ],
+            "12. Analytics & Tracking": [
+                "Analytics tracking is properly implemented",
+                "Conversion tracking is set up correctly",
+                "Event tracking works for key interactions",
+                "Goal funnels are properly configured",
+                "Data collection complies with privacy regulations"
+            ],
+            "13. Error Handling & Edge Cases": [
+                "404 pages are custom and helpful",
+                "Server errors are handled gracefully",
+                "Empty states are properly designed",
+                "Offline functionality works where applicable",
+                "Edge cases are handled without breaking the site"
+            ]
+        }
         
         # Agency DNA for marketing excellence
         self.agency_dna = """
@@ -382,6 +479,104 @@ class MarketingAgencyBot(commands.Bot):
         except Exception as e:
             logger.error(f"Channel creation error: {e}")
             return None, None
+    
+    async def analyze_website(self, url: str):
+        """Analyze a website for UAT testing"""
+        try:
+            # Validate URL
+            parsed_url = urlparse(url)
+            if not parsed_url.scheme:
+                url = f"https://{url}"
+            
+            # Basic website analysis
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            # Extract basic info
+            content = response.text
+            title_match = re.search(r'<title>(.*?)</title>', content, re.IGNORECASE | re.DOTALL)
+            title = title_match.group(1).strip() if title_match else "No title found"
+            
+            # Check for common elements
+            has_forms = bool(re.search(r'<form', content, re.IGNORECASE))
+            has_images = bool(re.search(r'<img', content, re.IGNORECASE))
+            has_scripts = bool(re.search(r'<script', content, re.IGNORECASE))
+            has_css = bool(re.search(r'<style|<link.*css', content, re.IGNORECASE))
+            
+            # Check HTTPS
+            is_https = url.startswith('https://')
+            
+            # Basic performance check
+            load_time = response.elapsed.total_seconds()
+            
+            return {
+                "url": url,
+                "title": title,
+                "status_code": response.status_code,
+                "load_time": load_time,
+                "is_https": is_https,
+                "has_forms": has_forms,
+                "has_images": has_images,
+                "has_scripts": has_scripts,
+                "has_css": has_css,
+                "content_length": len(content)
+            }
+            
+        except requests.exceptions.RequestException as e:
+            return {"error": f"Failed to analyze website: {str(e)}"}
+        except Exception as e:
+            return {"error": f"Analysis error: {str(e)}"}
+    
+    async def generate_uat_report(self, website_data: dict, custom_notes: str = ""):
+        """Generate comprehensive UAT testing report"""
+        try:
+            prompt = f"""
+            Generate a comprehensive UAT (User Acceptance Testing) report for this website:
+            
+            Website Data:
+            - URL: {website_data.get('url', 'N/A')}
+            - Title: {website_data.get('title', 'N/A')}
+            - Status Code: {website_data.get('status_code', 'N/A')}
+            - Load Time: {website_data.get('load_time', 'N/A')} seconds
+            - HTTPS: {'✅' if website_data.get('is_https') else '❌'}
+            - Has Forms: {'✅' if website_data.get('has_forms') else '❌'}
+            - Has Images: {'✅' if website_data.get('has_images') else '❌'}
+            - Has Scripts: {'✅' if website_data.get('has_scripts') else '❌'}
+            - Has CSS: {'✅' if website_data.get('has_css') else '❌'}
+            - Content Length: {website_data.get('content_length', 'N/A')} characters
+            
+            Custom Notes: {custom_notes if custom_notes else 'None provided'}
+            
+            Please provide a detailed UAT report covering all 13 SOP categories:
+            
+            1. **Navigation & Menu** - Test navigation functionality
+            2. **Page Loading & Performance** - Analyze loading times and performance
+            3. **Forms & User Input** - Check form functionality and validation
+            4. **Content & Copy** - Review content quality and structure
+            5. **Visual Design & Layout** - Assess design consistency and layout
+            6. **Functionality & Features** - Test interactive elements
+            7. **Cross-Browser Compatibility** - Note browser compatibility issues
+            8. **Mobile Responsiveness** - Check mobile optimization
+            9. **Accessibility (WCAG)** - Review accessibility compliance
+            10. **Security & Privacy** - Assess security measures
+            11. **SEO & Meta Tags** - Check SEO optimization
+            12. **Analytics & Tracking** - Note tracking implementation
+            13. **Error Handling & Edge Cases** - Test error scenarios
+            
+            For each category, provide:
+            - ✅ **PASS** - What's working well
+            - ⚠️ **WARNING** - Areas that need attention
+            - ❌ **FAIL** - Critical issues that must be fixed
+            - 📝 **RECOMMENDATIONS** - Specific improvement suggestions
+            
+            Format as a professional UAT report with clear sections and actionable insights.
+            """
+            
+            return await self._get_ai_response(prompt, "UAT Testing Expert")
+            
+        except Exception as e:
+            logger.error(f"UAT report generation error: {e}")
+            return f"Error generating UAT report: {str(e)}"
     
     async def _generate_nano_banana_image(self, prompt: str, style: str = "professional"):
         """Generate images using Nano Banana with Modern Weave™ branding"""
@@ -877,6 +1072,160 @@ async def cmd_clickup(interaction: discord.Interaction, action: str, task_name: 
         logger.error(f"ClickUp error: {e}")
         await interaction.followup.send(f"❌ ClickUp error: {str(e)}")
 
+# ===== UAT TESTING AGENT =====
+
+@bot.tree.command(name="uat", description="🧪 UAT Testing Agent - Test websites against 13 SOPs")
+async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, custom_notes: str = ""):
+    """UAT Testing Agent for website testing"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Analyze the website
+        embed = discord.Embed(
+            title="🧪 UAT Testing Agent",
+            description=f"Analyzing website: {website_url}",
+            color=bot.agency_config['primary_color']
+        )
+        
+        embed.add_field(
+            name="🔍 Initial Analysis",
+            value="Scanning website for basic functionality and structure...",
+            inline=False
+        )
+        
+        await interaction.followup.send(embed=embed)
+        
+        # Perform website analysis
+        website_data = await bot.analyze_website(website_url)
+        
+        if "error" in website_data:
+            error_embed = discord.Embed(
+                title="❌ UAT Testing Failed",
+                description=f"Could not analyze website: {website_data['error']}",
+                color=bot.agency_config['error_color']
+            )
+            await interaction.followup.send(embed=error_embed)
+            return
+        
+        # Generate comprehensive UAT report
+        uat_report = await bot.generate_uat_report(website_data, custom_notes)
+        
+        # Create detailed UAT report embed
+        report_embed = discord.Embed(
+            title="📋 UAT Testing Report",
+            description=f"**Website:** {website_data['url']}\n**Title:** {website_data['title']}",
+            color=bot.agency_config['accent_color']
+        )
+        
+        # Add website analysis summary
+        report_embed.add_field(
+            name="📊 Website Analysis Summary",
+            value=f"""
+**Status Code:** {website_data['status_code']}
+**Load Time:** {website_data['load_time']:.2f}s
+**HTTPS:** {'✅ Secure' if website_data['is_https'] else '❌ Not Secure'}
+**Forms:** {'✅ Present' if website_data['has_forms'] else '❌ None Found'}
+**Images:** {'✅ Present' if website_data['has_images'] else '❌ None Found'}
+**Scripts:** {'✅ Present' if website_data['has_scripts'] else '❌ None Found'}
+**CSS:** {'✅ Present' if website_data['has_css'] else '❌ None Found'}
+            """,
+            inline=False
+        )
+        
+        # Add UAT report
+        if len(uat_report) > 1024:
+            chunks = [uat_report[i:i+1020] for i in range(0, len(uat_report), 1020)]
+            for i, chunk in enumerate(chunks[:3]):  # Limit to 3 chunks
+                report_embed.add_field(
+                    name=f"📋 UAT Report {f'(Part {i+1})' if len(chunks) > 1 else ''}",
+                    value=chunk,
+                    inline=False
+                )
+        else:
+            report_embed.add_field(
+                name="📋 UAT Report",
+                value=uat_report,
+                inline=False
+            )
+        
+        # Add SOP checklist
+        sop_summary = "**13 SOP Categories Tested:**\n"
+        for sop_name in bot.uat_sops.keys():
+            sop_summary += f"• {sop_name}\n"
+        
+        report_embed.add_field(
+            name="✅ SOP Checklist",
+            value=sop_summary,
+            inline=False
+        )
+        
+        # Create downloadable report file
+        full_report = f"""# UAT Testing Report
+
+## Website Information
+- **URL:** {website_data['url']}
+- **Title:** {website_data['title']}
+- **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- **Status Code:** {website_data['status_code']}
+- **Load Time:** {website_data['load_time']:.2f} seconds
+
+## Technical Analysis
+- **HTTPS:** {'✅ Secure' if website_data['is_https'] else '❌ Not Secure'}
+- **Forms:** {'✅ Present' if website_data['has_forms'] else '❌ None Found'}
+- **Images:** {'✅ Present' if website_data['has_images'] else '❌ None Found'}
+- **Scripts:** {'✅ Present' if website_data['has_scripts'] else '❌ None Found'}
+- **CSS:** {'✅ Present' if website_data['has_css'] else '❌ None Found'}
+- **Content Length:** {website_data['content_length']} characters
+
+## Custom Notes
+{custom_notes if custom_notes else 'No custom notes provided'}
+
+## UAT Testing Report
+{uat_report}
+
+## 13 SOP Categories Tested
+"""
+        
+        for sop_name, sop_items in bot.uat_sops.items():
+            full_report += f"\n### {sop_name}\n"
+            for item in sop_items:
+                full_report += f"- {item}\n"
+        
+        # Create downloadable file
+        file_buffer = io.BytesIO(full_report.encode('utf-8'))
+        file = discord.File(file_buffer, filename=f"UAT_Report_{website_data['url'].replace('https://', '').replace('http://', '').replace('/', '_')}.md")
+        
+        await interaction.followup.send(embed=report_embed, file=file)
+        
+    except Exception as e:
+        logger.error(f"UAT testing error: {e}")
+        await interaction.followup.send(f"❌ UAT testing error: {str(e)}")
+
+@bot.tree.command(name="sops", description="📋 Show the 13 UAT Testing SOPs")
+async def cmd_show_sops(interaction: discord.Interaction):
+    """Show the 13 UAT Testing SOPs"""
+    try:
+        embed = discord.Embed(
+            title="📋 UAT Testing SOPs",
+            description="13 Standard Operating Procedures for website testing",
+            color=bot.agency_config['primary_color']
+        )
+        
+        for sop_name, sop_items in bot.uat_sops.items():
+            sop_text = "\n".join([f"• {item}" for item in sop_items])
+            embed.add_field(
+                name=sop_name,
+                value=sop_text,
+                inline=False
+            )
+        
+        embed.set_footer(text="Use /uat command to test a website against these SOPs")
+        
+        await interaction.response.send_message(embed=embed)
+        
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {str(e)}")
+
 @bot.tree.command(name="help", description="❓ Show marketing agency AI hub commands")
 async def cmd_help(interaction: discord.Interaction):
     try:
@@ -899,14 +1248,20 @@ async def cmd_help(interaction: discord.Interaction):
         )
         
         embed.add_field(
+            name="🧪 UAT Testing Agent",
+            value="• `/uat` - Test websites against 13 SOPs\n• `/sops` - Show the 13 UAT Testing SOPs",
+            inline=False
+        )
+        
+        embed.add_field(
             name="💡 Example Commands",
-            value="`/upload file:project-brief.md`\n`/project project_name:'New Campaign' description:'Q1 marketing campaign'`\n`/clickup action:list`",
+            value="`/upload file:project-brief.md`\n`/project project_name:'New Campaign' description:'Q1 marketing campaign'`\n`/clickup action:list`\n`/uat website_url:https://example.com custom_notes:'Test for mobile responsiveness'`",
             inline=False
         )
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• Complete marketing workflows",
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 13 SOPs\n• Complete marketing workflows",
             inline=False
         )
         
