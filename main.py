@@ -1060,28 +1060,15 @@ class MarketingAgencyBot(commands.Bot):
             
             # Track initial participants in the voice channel
             try:
-                logger.info(f"Voice channel type: {type(voice_channel)}")
-                logger.info(f"Voice channel has members attr: {hasattr(voice_channel, 'members')}")
-                
-                if hasattr(voice_channel, 'members'):
-                    members_list = voice_channel.members
-                    logger.info(f"Members list type: {type(members_list)}, length: {len(members_list) if members_list else 'None'}")
-                    
-                    if members_list:
-                        for i, member in enumerate(members_list):
-                            logger.info(f"Processing member {i}: {member.name} (bot: {member.bot})")
-                            if not member.bot:  # Don't track bots
-                                self.meeting_tracker.track_user_join(member)
-                                logger.info(f"Tracked initial participant: {member.name}")
-                    else:
-                        logger.info("Members list is empty")
+                if hasattr(voice_channel, 'members') and voice_channel.members:
+                    for member in voice_channel.members:
+                        if not member.bot:  # Don't track bots
+                            self.meeting_tracker.track_user_join(member)
+                            logger.info(f"Tracked initial participant: {member.name}")
                 else:
-                    logger.info("Voice channel has no members attribute")
+                    logger.info("No initial participants in voice channel")
             except Exception as e:
                 logger.error(f"Error tracking initial participants: {e}")
-                logger.error(f"Exception type: {type(e)}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
                 # Continue anyway - this is not critical
             
             self.meeting_tracker.add_manual_note("Meeting started - Bot joined voice channel")
@@ -2145,11 +2132,16 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                     description=f"**Meeting:** {interaction.channel.name}\n**Duration:** {bot.meeting_start_time.strftime('%H:%M')} - {datetime.now().strftime('%H:%M')}",
                     color=bot.agency_config["accent_color"]
                 )
-                embed.add_field(
-                    name="📋 Minutes",
-                    value=minutes[:1024] + "..." if len(minutes) > 1024 else minutes,
-                    inline=False
-                )
+                # Split long minutes into multiple fields or use description
+                if len(minutes) > 1024:
+                    # Use description for long content
+                    embed.description = minutes[:4096] + "..." if len(minutes) > 4096 else minutes
+                else:
+                    embed.add_field(
+                        name="📋 Minutes",
+                        value=minutes,
+                        inline=False
+                    )
                 embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
                 
                 await huddle_channel.send(embed=embed)
@@ -2206,7 +2198,10 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
             
     except Exception as e:
         logger.error(f"Meeting command error: {e}")
-        await interaction.response.send_message(f"❌ Meeting error: {str(e)}")
+        if not interaction.response.is_done():
+            await interaction.response.send_message(f"❌ Meeting error: {str(e)}")
+        else:
+            await interaction.followup.send(f"❌ Meeting error: {str(e)}")
 
 # Debug: Check if commands are registered
 print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
