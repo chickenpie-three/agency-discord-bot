@@ -1313,21 +1313,28 @@ async def cmd_ask(interaction: discord.Interaction, query: str):
         logger.error(f"Ask command error: {e}")
         await interaction.followup.send(f"❌ Error processing your query: {str(e)}")
 
-@bot.tree.command(name="content", description="📝 Enterprise blog posts with SEO and paired images")
-async def cmd_content_enterprise(interaction: discord.Interaction, content_type: str, topic: str, keywords: str = "", include_image: bool = True):
-    """Enterprise content creation with Modern Weave™ branding"""
+@bot.tree.command(name="blog", description="📝 Create professional blog posts with SEO optimization")
+async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str = "", include_image: bool = True):
+    """Create professional blog posts"""
     await interaction.response.defer(thinking=True)
     
     try:
         system_context = """
         You are a senior content strategist and marketing expert for a professional marketing agency.
         
-        Expertise:
-        - B2B marketing content creation and strategy
-        - Professional marketing agency brand implementation
-        - Executive-level thought leadership content
-        - SEO optimization for marketing keywords
-        - Competitive positioning in the marketing services industry
+        Your expertise includes:
+        - Content strategy and planning
+        - SEO optimization and keyword research
+        - Brand storytelling and messaging
+        - Audience engagement and conversion
+        - Multi-platform content adaptation
+        
+        Create blog content that is:
+        - Professional and authoritative
+        - SEO-optimized with natural keyword integration
+        - Engaging and actionable for readers
+        - Aligned with modern marketing best practices
+        - Designed to drive business results
         """
         
         enhanced_prompt = f"""
@@ -1462,6 +1469,156 @@ async def cmd_content_enterprise(interaction: discord.Interaction, content_type:
             
     except Exception as e:
         logger.error(f"Enterprise content error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+# ===== SEPARATE CONTENT COMMANDS =====
+
+@bot.tree.command(name="image", description="🎨 Generate images with Nano Banana AI")
+async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = "professional"):
+    """Generate images using Nano Banana AI"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Generate image
+        image_file = await bot._generate_nano_banana_image(prompt, style)
+        
+        if image_file:
+            embed = discord.Embed(
+                title="🎨 Image Generated",
+                description=f"**Prompt:** {prompt}\n**Style:** {style}",
+                color=bot.agency_config['accent_color']
+            )
+            
+            embed.add_field(
+                name="✨ Generated Image",
+                value="AI-generated image attached below",
+                inline=False
+            )
+            
+            embed.set_footer(text="Marketing Agency AI Hub • Image Generation")
+            
+            await interaction.followup.send(embed=embed, files=[image_file])
+        else:
+            await interaction.followup.send("❌ Failed to generate image. Please try again.")
+            
+    except Exception as e:
+        logger.error(f"Image generation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="carousel", description="📱 Create social media carousel content")
+async def cmd_carousel(interaction: discord.Interaction, topic: str, slides: int = 5):
+    """Create social media carousel content"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        system_context = """
+        You are a social media content strategist specializing in carousel posts.
+        Create engaging, educational carousel content that drives engagement and conversions.
+        """
+        
+        prompt = f"""
+        Create a {slides}-slide social media carousel about: {topic}
+        
+        Requirements:
+        - Each slide should have a clear headline and key point
+        - Educational and valuable content
+        - Engaging and shareable
+        - Include a strong call-to-action on the final slide
+        - Optimized for Instagram, LinkedIn, and Facebook
+        
+        Format each slide as:
+        Slide 1: [Headline] - [Key Point]
+        Slide 2: [Headline] - [Key Point]
+        etc.
+        """
+        
+        carousel_content = await bot._get_ai_response(prompt, system_context, max_length=1500)
+        
+        embed = discord.Embed(
+            title="📱 Carousel Content Created",
+            description=f"**Topic:** {topic}\n**Slides:** {slides}",
+            color=bot.agency_config['accent_color']
+        )
+        
+        embed.add_field(
+            name="📄 Carousel Content",
+            value=carousel_content[:1024] + "..." if len(carousel_content) > 1024 else carousel_content,
+            inline=False
+        )
+        
+        embed.set_footer(text="Marketing Agency AI Hub • Carousel Creation")
+        
+        await interaction.followup.send(embed=embed)
+        
+    except Exception as e:
+        logger.error(f"Carousel creation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="spinoff", description="🚀 Create multiple social media posts from blog content")
+async def cmd_spinoff(interaction: discord.Interaction, blog_content: str, platforms: str = "all"):
+    """Create multiple social media posts from blog content"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        system_context = """
+        You are a social media content strategist who creates platform-specific posts from blog content.
+        Extract key points and create engaging posts for different social media platforms.
+        """
+        
+        prompt = f"""
+        Create multiple social media posts from this blog content:
+        
+        {blog_content}
+        
+        Create posts for: {platforms}
+        
+        For each platform, create:
+        1. Instagram post (with caption and hashtags)
+        2. LinkedIn post (professional tone)
+        3. Twitter/X post (concise and engaging)
+        4. Facebook post (conversational tone)
+        5. TikTok script (trendy and engaging)
+        
+        Each post should:
+        - Extract key insights from the blog
+        - Be platform-optimized
+        - Include relevant hashtags
+        - Have a clear call-to-action
+        - Be ready to post immediately
+        
+        Format each post clearly with platform labels.
+        """
+        
+        spinoff_content = await bot._get_ai_response(prompt, system_context, max_length=3000)
+        
+        embed = discord.Embed(
+            title="🚀 Social Media Posts Created",
+            description=f"**Platforms:** {platforms}\n**Based on:** Blog content analysis",
+            color=bot.agency_config['accent_color']
+        )
+        
+        # Split long content into multiple fields
+        if len(spinoff_content) > 1024:
+            chunks = [spinoff_content[i:i+1020] for i in range(0, len(spinoff_content), 1020)]
+            for i, chunk in enumerate(chunks[:3]):  # Limit to 3 chunks
+                embed.add_field(
+                    name=f"📱 Social Media Posts {f'(Part {i+1})' if len(chunks) > 1 else ''}",
+                    value=chunk,
+                    inline=False
+                )
+        else:
+            embed.add_field(
+                name="📱 Social Media Posts",
+                value=spinoff_content,
+                inline=False
+            )
+        
+        embed.set_footer(text="Marketing Agency AI Hub • Content Spinoff")
+        
+        await interaction.followup.send(embed=embed)
+        
+    except Exception as e:
+        logger.error(f"Spinoff creation error: {e}")
         await interaction.followup.send(f"❌ Error: {str(e)}")
 
 # Add other essential commands...
@@ -2012,7 +2169,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🎨 Content Creation",
-            value="• `/content` - Blog posts with SEO + AI images\n• `/image` - Nano Banana image generation",
+            value="• `/blog` - Create professional blog posts with SEO\n• `/image` - Generate images with Nano Banana AI\n• `/carousel` - Create social media carousel content\n• `/spinoff` - Create multiple posts from blog content",
             inline=False
         )
         
@@ -2041,7 +2198,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="💡 Example Commands",
-            value="`/upload file:project-brief.md`\n`/project project_name:'New Campaign' description:'Q1 marketing campaign'`\n`/clickup action:list`\n`/uat website_url:https://example.com custom_notes:'Test for mobile responsiveness'`",
+            value="`/blog topic:'AI Marketing Trends' keywords:'AI, marketing, automation'`\n`/spinoff blog_content:'[paste blog content]' platforms:'all'`\n`/image prompt:'Professional marketing team' style:'modern'`\n`/carousel topic:'Digital Marketing Tips' slides:7`",
             inline=False
         )
         
