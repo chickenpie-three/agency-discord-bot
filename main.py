@@ -1040,8 +1040,11 @@ class MarketingAgencyBot(commands.Bot):
     async def start_voice_meeting(self, voice_channel):
         """Start voice meeting tracking"""
         try:
+            logger.info(f"Attempting to join voice channel: {voice_channel.name}")
+            
             # Join the voice channel
             voice_client = await voice_channel.connect()
+            logger.info("Successfully connected to voice channel")
             
             # Store voice client reference
             self.voice_client = voice_client
@@ -1049,14 +1052,37 @@ class MarketingAgencyBot(commands.Bot):
             # Initialize meeting data
             self.meeting_start_time = datetime.now()
             self.is_recording = True
+            logger.info("Meeting data initialized")
             
             # Create meeting tracker
             self.meeting_tracker = SimpleMeetingTracker(self)
+            logger.info("Meeting tracker created")
             
             # Track initial participants in the voice channel
-            for member in voice_channel.members:
-                if not member.bot:  # Don't track bots
-                    self.meeting_tracker.track_user_join(member)
+            try:
+                logger.info(f"Voice channel type: {type(voice_channel)}")
+                logger.info(f"Voice channel has members attr: {hasattr(voice_channel, 'members')}")
+                
+                if hasattr(voice_channel, 'members'):
+                    members_list = voice_channel.members
+                    logger.info(f"Members list type: {type(members_list)}, length: {len(members_list) if members_list else 'None'}")
+                    
+                    if members_list:
+                        for i, member in enumerate(members_list):
+                            logger.info(f"Processing member {i}: {member.name} (bot: {member.bot})")
+                            if not member.bot:  # Don't track bots
+                                self.meeting_tracker.track_user_join(member)
+                                logger.info(f"Tracked initial participant: {member.name}")
+                    else:
+                        logger.info("Members list is empty")
+                else:
+                    logger.info("Voice channel has no members attribute")
+            except Exception as e:
+                logger.error(f"Error tracking initial participants: {e}")
+                logger.error(f"Exception type: {type(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                # Continue anyway - this is not critical
             
             self.meeting_tracker.add_manual_note("Meeting started - Bot joined voice channel")
             
@@ -1066,6 +1092,9 @@ class MarketingAgencyBot(commands.Bot):
             
         except Exception as e:
             logger.error(f"Error starting voice meeting: {e}")
+            logger.error(f"Exception type: {type(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     
