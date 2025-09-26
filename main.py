@@ -696,18 +696,56 @@ class MarketingAgencyBot(commands.Bot):
             if 'nano_banana' not in self.ai_clients:
                 return {"success": False, "error": "Nano Banana not available"}
             
+            # Style-specific configurations
+            style_configs = {
+                "professional": {
+                    "tone": "clean, corporate, business-focused",
+                    "colors": "Professional Blue (#2563eb), Success Green (#10b981), Neutral Grays",
+                    "mood": "serious, trustworthy, authoritative"
+                },
+                "creative": {
+                    "tone": "artistic, innovative, visually striking",
+                    "colors": "Vibrant colors, creative gradients, bold contrasts",
+                    "mood": "energetic, inspiring, dynamic"
+                },
+                "casual": {
+                    "tone": "friendly, approachable, relaxed",
+                    "colors": "Warm colors, soft tones, inviting palette",
+                    "mood": "welcoming, comfortable, accessible"
+                },
+                "minimalist": {
+                    "tone": "simple, clean, uncluttered",
+                    "colors": "Monochrome, single accent color, lots of white space",
+                    "mood": "calm, focused, elegant"
+                },
+                "modern": {
+                    "tone": "contemporary, sleek, cutting-edge",
+                    "colors": "Modern gradients, tech-inspired colors, metallic accents",
+                    "mood": "innovative, forward-thinking, sophisticated"
+                },
+                "vintage": {
+                    "tone": "retro, nostalgic, classic",
+                    "colors": "Muted tones, sepia, aged colors",
+                    "mood": "nostalgic, timeless, authentic"
+                }
+            }
+            
+            config = style_configs.get(style.lower(), style_configs["professional"])
+            
             branded_prompt = f"""
-            Create a professional marketing agency image:
+            Create a {style} marketing agency image:
             
             Subject: {prompt}
-            Style: {style}, modern, clean, professional marketing aesthetic
-            Brand Colors: Professional Blue (#2563eb), Success Green (#10b981), Warning Orange (#f59e0b)
+            Style: {style} - {config['tone']}
+            Color Palette: {config['colors']}
+            Mood: {config['mood']}
             Design System: Modern, clean, data-driven with creative flair
             Photography Style: Bright, professional, showing marketing processes and team collaboration
             Layout: Clean hierarchy, ample whitespace, decisive composition
             Quality: Professional-grade, suitable for marketing presentations and campaigns
             
             Focus on visual elements that convey marketing expertise and professional agency services.
+            Adapt the visual style to match the {style} aesthetic while maintaining professional quality.
             Avoid text overlays, clutter, or gimmicks. Clean, professional, results-focused aesthetic.
             """
             
@@ -1314,7 +1352,7 @@ async def cmd_ask(interaction: discord.Interaction, query: str):
         await interaction.followup.send(f"❌ Error processing your query: {str(e)}")
 
 @bot.tree.command(name="blog", description="📝 Create professional blog posts with SEO optimization")
-async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str = "", include_image: bool = True):
+async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str = "", style: str = "professional", target_audience: str = "marketing professionals", include_image: bool = True):
     """Create professional blog posts"""
     await interaction.response.defer(thinking=True)
     
@@ -1340,18 +1378,21 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
         enhanced_prompt = f"""
         Create comprehensive blog post for our marketing agency about: {topic}
         Target Keywords: {keywords if keywords else 'marketing strategy, content creation, digital marketing, brand development'}
+        Writing Style: {style}
+        Target Audience: {target_audience}
         
-        ENTERPRISE CONTENT REQUIREMENTS:
+        CONTENT REQUIREMENTS:
         
-        1. COMPREHENSIVE LENGTH: 2500-4000 words for blog posts
-        2. EXECUTIVE POSITIONING: Target COOs, CTOs, CMOs, Heads of Operations
-        3. MODERN WEAVE™ BRAND INTEGRATION:
-           - Use institutional clarity with cultural warmth
-           - Reference Filipino craftsmanship and heritage
-           - Emphasize managed delivery vs marketplace approach
-           - Include enterprise governance and SLA focus
+        1. LENGTH: 1500-3000 words (adjust based on style and audience)
+        2. TARGET AUDIENCE: {target_audience}
+        3. WRITING STYLE: {style} - adapt tone, complexity, and approach accordingly
+        4. MARKETING AGENCY BRAND INTEGRATION:
+           - Professional yet approachable tone
+           - Results-focused messaging
+           - Data-driven insights with creative flair
+           - Modern marketing expertise positioning
         
-        4. ADVANCED SEO STRATEGY:
+        5. ADVANCED SEO STRATEGY:
            - Primary keyword in title, first 100 words, and conclusion
            - Secondary keywords naturally integrated throughout
            - Long-tail enterprise keywords (managed virtual teams, offshore CX pod)
@@ -1391,13 +1432,13 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
         # Generate professional marketing image
         image_result = None
         if include_image and NANO_BANANA_AVAILABLE:
-            image_prompt = f"Professional marketing agency header image for article about {topic}. Clean layout, modern marketing aesthetic, professional photography. Professional, clean, marketing-grade visual suitable for business audiences."
-            image_result = await bot._generate_nano_banana_image(image_prompt, "professional")
+            image_prompt = f"{style} marketing agency header image for article about {topic}. Target audience: {target_audience}. Clean layout, modern marketing aesthetic, professional photography. {style} visual suitable for {target_audience}."
+            image_result = await bot._generate_nano_banana_image(image_prompt, style)
         
         # Create professional marketing embed
         embed = discord.Embed(
             title="📝 Marketing Content Created!",
-            description=f"**Type:** Blog Post\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
+            description=f"**Type:** Blog Post\n**Topic:** {topic}\n**Style:** {style}\n**Audience:** {target_audience}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
             color=bot.agency_config['primary_color']
         )
         
@@ -1473,7 +1514,75 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
 
 # ===== SEPARATE CONTENT COMMANDS =====
 
-@bot.tree.command(name="image", description="🎨 Generate images with Nano Banana AI")
+@bot.tree.command(name="styles", description="🎨 Show available styles for blog and image commands")
+async def cmd_styles(interaction: discord.Interaction):
+    """Show available styles for content generation"""
+    await interaction.response.defer(ephemeral=True)
+    
+    embed = discord.Embed(
+        title="🎨 Available Styles & Options",
+        description="Customize your content generation with these style options:",
+        color=bot.agency_config['accent_color']
+    )
+    
+    # Blog styles
+    embed.add_field(
+        name="📝 Blog Writing Styles",
+        value="""
+**professional** - Corporate, authoritative, business-focused
+**casual** - Friendly, conversational, approachable  
+**creative** - Artistic, innovative, engaging
+**technical** - Detailed, analytical, data-driven
+**storytelling** - Narrative-driven, compelling, emotional
+**educational** - Informative, tutorial-style, helpful
+        """,
+        inline=False
+    )
+    
+    # Image styles
+    embed.add_field(
+        name="🎨 Image Visual Styles",
+        value="""
+**professional** - Clean, corporate, business-focused
+**creative** - Artistic, innovative, visually striking
+**casual** - Friendly, approachable, relaxed
+**minimalist** - Simple, clean, uncluttered
+**modern** - Contemporary, sleek, cutting-edge
+**vintage** - Retro, nostalgic, classic
+        """,
+        inline=False
+    )
+    
+    # Target audiences
+    embed.add_field(
+        name="👥 Target Audiences",
+        value="""
+**marketing professionals** - CMOs, marketing managers, agencies
+**business owners** - Entrepreneurs, small business owners
+**startups** - Early-stage companies, founders
+**enterprise** - Large corporations, executives
+**consumers** - General public, end users
+**developers** - Technical teams, engineers
+**students** - Learners, educational content
+        """,
+        inline=False
+    )
+    
+    embed.add_field(
+        name="💡 Usage Examples",
+        value="""
+`/blog topic:"AI Marketing" style:creative audience:startups`
+`/image prompt:"team meeting" style:minimalist`
+`/blog topic:"SEO Tips" style:educational audience:business owners`
+        """,
+        inline=False
+    )
+    
+    embed.set_footer(text="Marketing Agency AI Hub • Custom Content Generation")
+    
+    await interaction.followup.send(embed=embed)
+
+@bot.tree.command(name="image", description="🎨 Generate images with Nano Banana AI - supports multiple styles")
 async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = "professional"):
     """Generate images using Nano Banana AI"""
     await interaction.response.defer(thinking=True)
