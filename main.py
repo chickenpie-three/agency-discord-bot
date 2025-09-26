@@ -18,6 +18,8 @@ import signal
 import sys
 import traceback
 from aiohttp import web
+import wave
+import speech_recognition as sr
 import threading
 
 # AI Libraries with Nano Banana support
@@ -984,6 +986,118 @@ class MarketingAgencyBot(commands.Bot):
             logger.error(f"Error creating Discord channel from ClickUp task: {e}")
             return None
 
+    # ===== VOICE MEETING ASSISTANT =====
+    
+    async def start_voice_meeting(self, voice_channel):
+        """Start voice meeting recording and transcription"""
+        try:
+            # Join the voice channel
+            voice_client = await voice_channel.connect()
+            
+            # Initialize speech recognition
+            self.recognizer = sr.Recognizer()
+            self.meeting_transcript = []
+            self.meeting_start_time = datetime.now()
+            self.is_recording = True
+            
+            # Start audio sink for recording
+            self.audio_sink = discord.AudioSink()
+            voice_client.start_recording(self.audio_sink, self.process_audio)
+            
+            logger.info(f"Started voice meeting in {voice_channel.name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error starting voice meeting: {e}")
+            return False
+    
+    def process_audio(self, user, audio):
+        """Process audio chunks for transcription"""
+        try:
+            if not self.is_recording:
+                return
+                
+            # Convert audio to text
+            audio_data = io.BytesIO(audio.raw_data)
+            
+            # Use speech recognition
+            with sr.AudioFile(audio_data) as source:
+                audio_data = self.recognizer.record(source)
+                try:
+                    text = self.recognizer.recognize_google(audio_data)
+                    if text:
+                        self.meeting_transcript.append({
+                            'user': user.name,
+                            'text': text,
+                            'timestamp': datetime.now().strftime("%H:%M:%S")
+                        })
+                        logger.info(f"Transcribed: {user.name}: {text}")
+                except sr.UnknownValueError:
+                    pass  # Could not understand audio
+                except sr.RequestError as e:
+                    logger.error(f"Speech recognition error: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Audio processing error: {e}")
+    
+    async def stop_voice_meeting(self):
+        """Stop voice meeting and generate minutes"""
+        try:
+            self.is_recording = False
+            
+            # Stop recording
+            if hasattr(self, 'voice_client') and self.voice_client:
+                self.voice_client.stop_recording()
+                await self.voice_client.disconnect()
+            
+            # Generate meeting minutes
+            minutes = await self.generate_meeting_minutes()
+            
+            logger.info("Voice meeting stopped and minutes generated")
+            return minutes
+            
+        except Exception as e:
+            logger.error(f"Error stopping voice meeting: {e}")
+            return None
+    
+    async def generate_meeting_minutes(self):
+        """Generate professional meeting minutes from transcript"""
+        try:
+            if not self.meeting_transcript:
+                return "No audio was captured during the meeting."
+            
+            # Create transcript text
+            transcript_text = ""
+            for entry in self.meeting_transcript:
+                transcript_text += f"[{entry['timestamp']}] {entry['user']}: {entry['text']}\n"
+            
+            # Use AI to generate meeting minutes
+            prompt = f"""
+            Please analyze this meeting transcript and create professional meeting minutes.
+            
+            Transcript:
+            {transcript_text}
+            
+            Meeting Duration: {self.meeting_start_time.strftime('%Y-%m-%d %H:%M')} - {datetime.now().strftime('%H:%M')}
+            
+            Please format as:
+            1. Meeting Summary
+            2. Key Discussion Points
+            3. Action Items (with assignees)
+            4. Decisions Made
+            5. Next Steps
+            
+            Make it professional and actionable.
+            """
+            
+            response = await self._get_ai_response(prompt, "You are a professional meeting secretary creating minutes.")
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error generating meeting minutes: {e}")
+            return "Error generating meeting minutes. Please try again."
+
 # ===== BOT INSTANCE CREATION =====
 # Create bot instance first so commands can reference it
 bot = MarketingAgencyBot()
@@ -1045,6 +1159,49 @@ def run_webhook_server():
 async def cmd_ping(interaction: discord.Interaction):
     """Simple ping command to test if commands are working"""
     await interaction.response.send_message("🏓 Pong! Bot is working and commands are registered!")
+
+@bot.tree.command(name="ask", description="🤖 Ask the AI assistant anything - natural language queries")
+async def cmd_ask(interaction: discord.Interaction, query: str):
+    """Natural language AI assistant for marketing tasks"""
+    try:
+        await interaction.response.defer(thinking=True)
+        
+        # Analyze the query and determine the best response
+        analysis_prompt = f"""
+        Analyze this marketing query and provide a helpful response:
+        Query: "{query}"
+        
+        You are a marketing agency AI assistant. Provide actionable advice, insights, or suggestions.
+        If the user is asking for content creation, strategy, analytics, or project management help, provide detailed guidance.
+        
+        Be conversational, professional, and focus on marketing excellence.
+        """
+        
+        response = await bot._get_ai_response(
+            analysis_prompt,
+            "You are a professional marketing consultant and AI assistant for a marketing agency.",
+            max_length=1500
+        )
+        
+        embed = discord.Embed(
+            title="🤖 AI Marketing Assistant",
+            description=response,
+            color=bot.agency_config["accent_color"]
+        )
+        
+        embed.add_field(
+            name="💡 Need More Help?",
+            value="Use specific commands like `/content`, `/strategy`, `/analytics`, or `/project` for detailed assistance",
+            inline=False
+        )
+        
+        embed.set_footer(text="AI-Powered Marketing Excellence • Marketing Agency AI Hub")
+        
+        await interaction.followup.send(embed=embed)
+        
+    except Exception as e:
+        logger.error(f"Ask command error: {e}")
+        await interaction.followup.send(f"❌ Error processing your query: {str(e)}")
 
 @bot.tree.command(name="content", description="📝 Enterprise blog posts with SEO and paired images")
 async def cmd_content_enterprise(interaction: discord.Interaction, content_type: str, topic: str, keywords: str = "", include_image: bool = True):
@@ -1588,6 +1745,9 @@ async def cmd_sync(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
     
     try:
+        # Clear all commands first to force refresh
+        bot.tree.clear_commands(guild=None)
+        
         # Sync commands directly
         synced = await bot.tree.sync()
         
@@ -1763,6 +1923,12 @@ async def cmd_help(interaction: discord.Interaction):
         )
         
         embed.add_field(
+            name="🎤 Voice Meeting Assistant",
+            value="• `/meeting join` - Bot joins voice channel for recording\n• `/meeting stop` - Stop recording and generate minutes\n• `/meeting status` - Check meeting status",
+            inline=False
+        )
+        
+        embed.add_field(
             name="📊 System Monitoring",
             value="• `/status` - Show bot health and system information\n• `/sync` - Force sync Discord commands",
             inline=False
@@ -1776,7 +1942,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Complete marketing workflows\n• Automatic ClickUp-to-Discord integration",            inline=False
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Voice meeting assistant with transcription\n• Complete marketing workflows\n• Automatic ClickUp-to-Discord integration",            inline=False
         )
         
         embed.set_footer(text="AI-Powered Marketing Excellence • Results-Driven • Data-Informed")
@@ -1787,6 +1953,130 @@ async def cmd_help(interaction: discord.Interaction):
             await interaction.response.send_message(f"❌ Error: {str(e)}")
         else:
             await interaction.followup.send(f"❌ Error: {str(e)}")
+
+# ===== VOICE MEETING COMMANDS =====
+
+@bot.tree.command(name="meeting", description="🎤 Voice meeting assistant - join, stop, status")
+async def cmd_meeting(interaction: discord.Interaction, action: str, channel: discord.VoiceChannel = None):
+    """Voice meeting assistant commands"""
+    try:
+        if action == "join":
+            if not channel:
+                await interaction.response.send_message("❌ Please specify a voice channel to join!")
+                return
+            
+            # Check if bot is already in a voice channel
+            if hasattr(bot, 'voice_client') and bot.voice_client:
+                await interaction.response.send_message("❌ Bot is already in a voice channel! Use `/meeting stop` first.")
+                return
+            
+            # Start voice meeting
+            success = await bot.start_voice_meeting(channel)
+            if success:
+                embed = discord.Embed(
+                    title="🎤 Voice Meeting Started",
+                    description=f"Bot joined **{channel.name}** and is now recording!",
+                    color=bot.agency_config["accent_color"]
+                )
+                embed.add_field(
+                    name="📝 What's Happening",
+                    value="• Bot is transcribing your conversation\n• Real-time speech-to-text processing\n• Professional meeting minutes will be generated",
+                    inline=False
+                )
+                embed.add_field(
+                    name="🛑 To Stop",
+                    value="Use `/meeting stop` when your meeting is finished",
+                    inline=False
+                )
+                embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+                
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message("❌ Failed to join voice channel. Check bot permissions!")
+                
+        elif action == "stop":
+            if not hasattr(bot, 'voice_client') or not bot.voice_client:
+                await interaction.response.send_message("❌ Bot is not in any voice channel!")
+                return
+            
+            await interaction.response.defer(thinking=True)
+            
+            # Stop voice meeting and generate minutes
+            minutes = await bot.stop_voice_meeting()
+            
+            if minutes:
+                # Create or get huddle-minutes channel
+                guild = interaction.guild
+                huddle_channel = discord.utils.get(guild.channels, name="huddle-minutes")
+                
+                if not huddle_channel:
+                    # Create huddle-minutes channel
+                    category = discord.utils.get(guild.categories, name="Projects")
+                    if not category:
+                        category = await guild.create_category("Projects")
+                    
+                    huddle_channel = await guild.create_text_channel(
+                        "huddle-minutes",
+                        category=category,
+                        topic="Meeting minutes and huddle notes"
+                    )
+                
+                # Send meeting minutes
+                embed = discord.Embed(
+                    title="📝 Meeting Minutes Generated",
+                    description=f"**Meeting:** {interaction.channel.name}\n**Duration:** {bot.meeting_start_time.strftime('%H:%M')} - {datetime.now().strftime('%H:%M')}",
+                    color=bot.agency_config["accent_color"]
+                )
+                embed.add_field(
+                    name="📋 Minutes",
+                    value=minutes[:1024] + "..." if len(minutes) > 1024 else minutes,
+                    inline=False
+                )
+                embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+                
+                await huddle_channel.send(embed=embed)
+                await interaction.followup.send("✅ Meeting minutes generated and posted to #huddle-minutes!")
+            else:
+                await interaction.followup.send("❌ Failed to generate meeting minutes. Please try again.")
+                
+        elif action == "status":
+            if hasattr(bot, 'voice_client') and bot.voice_client:
+                embed = discord.Embed(
+                    title="🎤 Meeting Status: Active",
+                    description=f"Bot is recording in **{bot.voice_client.channel.name}**",
+                    color=bot.agency_config["accent_color"]
+                )
+                embed.add_field(
+                    name="📊 Recording Stats",
+                    value=f"**Started:** {bot.meeting_start_time.strftime('%H:%M:%S')}\n**Duration:** {datetime.now() - bot.meeting_start_time}\n**Transcript Entries:** {len(bot.meeting_transcript)}",
+                    inline=False
+                )
+                embed.add_field(
+                    name="🛑 To Stop",
+                    value="Use `/meeting stop` to end recording and generate minutes",
+                    inline=False
+                )
+            else:
+                embed = discord.Embed(
+                    title="🎤 Meeting Status: Inactive",
+                    description="Bot is not currently in any voice channel",
+                    color=bot.agency_config["error_color"]
+                )
+                embed.add_field(
+                    name="🚀 To Start",
+                    value="Use `/meeting join <voice_channel>` to start recording",
+                    inline=False
+                )
+            
+            embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+            await interaction.response.send_message(embed=embed)
+            
+        else:
+            await interaction.response.send_message("❌ Invalid action! Use: `join`, `stop`, or `status`")
+            
+    except Exception as e:
+        logger.error(f"Meeting command error: {e}")
+        await interaction.response.send_message(f"❌ Meeting error: {str(e)}")
 
 # Debug: Check if commands are registered
 print(f"Bot created. Commands registered: {len(bot.tree.get_commands())}")
