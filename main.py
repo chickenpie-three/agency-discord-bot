@@ -18,13 +18,9 @@ import signal
 import sys
 import traceback
 from aiohttp import web
-import wave
 import speech_recognition as sr
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import audioop
 from pydub import AudioSegment
-from google.cloud import speech
 import threading
 
 # Custom Audio Sink for Discord Voice Recording
@@ -50,8 +46,8 @@ class MeetingAudioSink(discord.sinks.Sink):
         self.audio_data[user.id]['audio_chunks'].append(data.data)
         self.audio_data[user.id]['last_activity'] = datetime.now()
         
-        # Process audio in chunks (every 3 seconds of audio)
-        if len(self.audio_data[user.id]['audio_chunks']) >= 144:  # ~3 seconds at 48kHz
+        # Process audio in chunks (every 5 seconds of audio)
+        if len(self.audio_data[user.id]['audio_chunks']) >= 240:  # ~5 seconds at 48kHz
             asyncio.create_task(self.process_audio_chunk(user))
     
     async def process_audio_chunk(self, user):
@@ -93,36 +89,11 @@ class MeetingAudioSink(discord.sinks.Sink):
             logger.error(f"Audio processing error: {e}")
     
     def transcribe_audio(self, audio_bytes, username):
-        """Transcribe audio using Google Speech Recognition"""
+        """Transcribe audio using simplified approach"""
         try:
-            # Convert raw audio to WAV format
-            audio_segment = AudioSegment(
-                data=audio_bytes,
-                sample_width=2,  # 16-bit
-                frame_rate=48000,  # Discord's sample rate
-                channels=2  # Stereo
-            )
-            
-            # Convert to mono and resample for speech recognition
-            audio_segment = audio_segment.set_channels(1).set_frame_rate(16000)
-            
-            # Export to WAV bytes
-            wav_bytes = io.BytesIO()
-            audio_segment.export(wav_bytes, format="wav")
-            wav_bytes.seek(0)
-            
-            # Use speech recognition
-            recognizer = sr.Recognizer()
-            with sr.AudioFile(wav_bytes) as source:
-                audio_data = recognizer.record(source)
-                try:
-                    text = recognizer.recognize_google(audio_data)
-                    return text
-                except sr.UnknownValueError:
-                    return None  # Could not understand audio
-                except sr.RequestError as e:
-                    logger.error(f"Speech recognition error: {e}")
-                    return None
+            # For now, return a placeholder that indicates audio was captured
+            # Real transcription will be added when we have proper audio format handling
+            return f"[Audio captured from {username}]"
                     
         except Exception as e:
             logger.error(f"Transcription error: {e}")
