@@ -31,6 +31,3 @@ psutil==5.9.6
 
 # Voice processing for meeting assistant
 pynacl==1.5.0
-ffmpeg-python==0.2.0
-speechrecognition==3.10.0
-pydub==0.25.1
