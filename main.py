@@ -20,7 +20,117 @@ import traceback
 from aiohttp import web
 import wave
 import speech_recognition as sr
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import audioop
+from pydub import AudioSegment
+from google.cloud import speech
 import threading
+
+# Custom Audio Sink for Discord Voice Recording
+class MeetingAudioSink(discord.sinks.Sink):
+    """Custom audio sink for meeting transcription"""
+    
+    def __init__(self, bot_instance):
+        super().__init__()
+        self.bot = bot_instance
+        self.audio_data = {}
+        self.executor = ThreadPoolExecutor(max_workers=2)
+        
+    def write(self, data, user):
+        """Write audio data from users"""
+        if user.id not in self.audio_data:
+            self.audio_data[user.id] = {
+                'user': user,
+                'audio_chunks': [],
+                'last_activity': datetime.now()
+            }
+        
+        # Store audio chunk
+        self.audio_data[user.id]['audio_chunks'].append(data.data)
+        self.audio_data[user.id]['last_activity'] = datetime.now()
+        
+        # Process audio in chunks (every 3 seconds of audio)
+        if len(self.audio_data[user.id]['audio_chunks']) >= 144:  # ~3 seconds at 48kHz
+            asyncio.create_task(self.process_audio_chunk(user))
+    
+    async def process_audio_chunk(self, user):
+        """Process accumulated audio chunks for transcription"""
+        try:
+            if user.id not in self.audio_data:
+                return
+                
+            chunks = self.audio_data[user.id]['audio_chunks']
+            if not chunks:
+                return
+                
+            # Clear processed chunks
+            self.audio_data[user.id]['audio_chunks'] = []
+            
+            # Convert to audio format for speech recognition
+            audio_bytes = b''.join(chunks)
+            
+            # Process in background thread
+            loop = asyncio.get_event_loop()
+            text = await loop.run_in_executor(
+                self.executor, 
+                self.transcribe_audio, 
+                audio_bytes, 
+                user.name
+            )
+            
+            if text and text.strip():
+                # Add to meeting transcript
+                if hasattr(self.bot, 'meeting_transcript'):
+                    self.bot.meeting_transcript.append({
+                        'user': user.name,
+                        'text': text.strip(),
+                        'timestamp': datetime.now().strftime("%H:%M:%S")
+                    })
+                    logger.info(f"Transcribed: {user.name}: {text.strip()}")
+                    
+        except Exception as e:
+            logger.error(f"Audio processing error: {e}")
+    
+    def transcribe_audio(self, audio_bytes, username):
+        """Transcribe audio using Google Speech Recognition"""
+        try:
+            # Convert raw audio to WAV format
+            audio_segment = AudioSegment(
+                data=audio_bytes,
+                sample_width=2,  # 16-bit
+                frame_rate=48000,  # Discord's sample rate
+                channels=2  # Stereo
+            )
+            
+            # Convert to mono and resample for speech recognition
+            audio_segment = audio_segment.set_channels(1).set_frame_rate(16000)
+            
+            # Export to WAV bytes
+            wav_bytes = io.BytesIO()
+            audio_segment.export(wav_bytes, format="wav")
+            wav_bytes.seek(0)
+            
+            # Use speech recognition
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(wav_bytes) as source:
+                audio_data = recognizer.record(source)
+                try:
+                    text = recognizer.recognize_google(audio_data)
+                    return text
+                except sr.UnknownValueError:
+                    return None  # Could not understand audio
+                except sr.RequestError as e:
+                    logger.error(f"Speech recognition error: {e}")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Transcription error: {e}")
+            return None
+    
+    def cleanup(self):
+        """Clean up resources"""
+        self.executor.shutdown(wait=False)
 
 # AI Libraries with Nano Banana support
 try:
@@ -997,17 +1107,20 @@ class MarketingAgencyBot(commands.Bot):
             # Store voice client reference
             self.voice_client = voice_client
             
-            # Initialize speech recognition
-            self.recognizer = sr.Recognizer()
+            # Initialize meeting data
             self.meeting_transcript = []
             self.meeting_start_time = datetime.now()
             self.is_recording = True
             
-            # For now, just join the channel - audio recording will be added later
-            # The discord.py audio recording API requires additional setup
+            # Create and start audio sink for real-time transcription
+            self.audio_sink = MeetingAudioSink(self)
+            voice_client.start_recording(
+                self.audio_sink,
+                lambda e: logger.error(f"Recording error: {e}")
+            )
             
             logger.info(f"Started voice meeting in {voice_channel.name}")
-            logger.info("Bot joined voice channel successfully! Audio transcription coming soon.")
+            logger.info("🎤 Real-time audio transcription active!")
             return True
             
         except Exception as e:
@@ -1048,12 +1161,18 @@ class MarketingAgencyBot(commands.Bot):
         try:
             self.is_recording = False
             
-            # Disconnect from voice channel
+            # Stop recording and clean up audio sink
             if hasattr(self, 'voice_client') and self.voice_client:
+                self.voice_client.stop_recording()
                 await self.voice_client.disconnect()
                 self.voice_client = None
             
-            # Generate meeting minutes (placeholder for now)
+            # Clean up audio sink
+            if hasattr(self, 'audio_sink'):
+                self.audio_sink.cleanup()
+                self.audio_sink = None
+            
+            # Generate detailed meeting minutes with transcript
             minutes = await self.generate_meeting_minutes()
             
             logger.info("Voice meeting stopped and minutes generated")
@@ -1066,9 +1185,10 @@ class MarketingAgencyBot(commands.Bot):
     async def generate_meeting_minutes(self):
         """Generate professional meeting minutes from transcript"""
         try:
+            duration = datetime.now() - self.meeting_start_time if hasattr(self, 'meeting_start_time') else timedelta(minutes=0)
+            
             if not hasattr(self, 'meeting_transcript') or not self.meeting_transcript:
                 # Generate placeholder meeting minutes
-                duration = datetime.now() - self.meeting_start_time if hasattr(self, 'meeting_start_time') else timedelta(minutes=0)
                 return f"""
 # 🎯 Meeting Minutes - {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
@@ -1078,7 +1198,7 @@ class MarketingAgencyBot(commands.Bot):
 ## 📝 Summary:
 Meeting session in voice channel completed successfully. 
 
-*Note: Audio transcription feature is being enhanced and will be available in the next update.*
+*Note: No speech was detected during this session. Ensure microphones are active and participants are speaking clearly.*
 
 ## 🎯 Next Steps:
 - Follow up on discussed items
@@ -1089,33 +1209,58 @@ Meeting session in voice channel completed successfully.
 *Generated by Marketing Agency AI Hub Voice Assistant*
 """
             
-            # Create transcript text
+            # Create detailed transcript
             transcript_text = ""
-            for entry in self.meeting_transcript:
-                transcript_text += f"[{entry['timestamp']}] {entry['user']}: {entry['text']}\n"
+            participants = set()
             
-            # Use AI to generate meeting minutes
-            prompt = f"""
-            Please analyze this meeting transcript and create professional meeting minutes.
+            for entry in self.meeting_transcript:
+                transcript_text += f"**[{entry['timestamp']}] {entry['user']}:** {entry['text']}\n\n"
+                participants.add(entry['user'])
+            
+            # Use AI to analyze the transcript and generate professional minutes
+            analysis_prompt = f"""
+            Analyze this meeting transcript and create professional meeting minutes:
+            
+            Meeting Duration: {str(duration).split('.')[0]}
+            Participants: {', '.join(participants)}
             
             Transcript:
             {transcript_text}
             
-            Meeting Duration: {self.meeting_start_time.strftime('%Y-%m-%d %H:%M')} - {datetime.now().strftime('%H:%M')}
-            
-            Please format as:
-            1. Meeting Summary
+            Please create structured meeting minutes with:
+            1. Executive Summary
             2. Key Discussion Points
-            3. Action Items (with assignees)
-            4. Decisions Made
+            3. Decisions Made
+            4. Action Items (with assignees if mentioned)
             5. Next Steps
             
-            Make it professional and actionable.
+            Make it professional and actionable for a marketing agency context.
             """
             
-            response = await self._get_ai_response(prompt, "You are a professional meeting secretary creating minutes.")
+            ai_minutes = await self._get_ai_response(
+                analysis_prompt,
+                "You are a professional meeting secretary creating detailed minutes for a marketing agency.",
+                max_length=2000
+            )
             
-            return response
+            # Combine AI analysis with raw transcript
+            return f"""
+# 🎯 Meeting Minutes - {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+**Duration:** {str(duration).split('.')[0]}
+**Participants:** {', '.join(participants)}
+**Transcript Entries:** {len(self.meeting_transcript)}
+
+{ai_minutes}
+
+---
+
+## 📝 Full Transcript:
+{transcript_text}
+
+---
+*Generated by Marketing Agency AI Hub Voice Assistant with Real-time Transcription*
+"""
             
         except Exception as e:
             logger.error(f"Error generating meeting minutes: {e}")
@@ -1947,7 +2092,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🎤 Voice Meeting Assistant",
-            value="• `/meeting join` - Bot joins voice channel for recording\n• `/meeting stop` - Stop recording and generate minutes\n• `/meeting status` - Check meeting status",
+            value="• `/meeting join` - Bot joins voice channel with real-time transcription\n• `/meeting stop` - Stop recording and generate AI-powered minutes\n• `/meeting status` - Check recording status and transcript stats",
             inline=False
         )
         
@@ -1965,7 +2110,7 @@ async def cmd_help(interaction: discord.Interaction):
         
         embed.add_field(
             name="🚀 Features",
-            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Voice meeting assistant with transcription\n• Complete marketing workflows\n• Automatic ClickUp-to-Discord integration",            inline=False
+            value="• AI-powered file analysis\n• Dynamic project channels\n• ClickUp integration\n• Nano Banana image generation\n• UAT testing with 8 Marketing SOPs\n• Real-time voice transcription & AI meeting minutes\n• Complete marketing workflows\n• Automatic ClickUp-to-Discord integration",            inline=False
         )
         
         embed.set_footer(text="AI-Powered Marketing Excellence • Results-Driven • Data-Informed")
@@ -2064,6 +2209,11 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 
         elif action == "status":
             if hasattr(bot, 'voice_client') and bot.voice_client:
+                transcript_count = len(bot.meeting_transcript) if hasattr(bot, 'meeting_transcript') else 0
+                participants = set()
+                if hasattr(bot, 'meeting_transcript'):
+                    participants = set(entry['user'] for entry in bot.meeting_transcript)
+                
                 embed = discord.Embed(
                     title="🎤 Meeting Status: Active",
                     description=f"Bot is recording in **{bot.voice_client.channel.name}**",
@@ -2071,12 +2221,17 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 )
                 embed.add_field(
                     name="📊 Recording Stats",
-                    value=f"**Started:** {bot.meeting_start_time.strftime('%H:%M:%S')}\n**Duration:** {datetime.now() - bot.meeting_start_time}\n**Transcript Entries:** {len(bot.meeting_transcript)}",
+                    value=f"**Started:** {bot.meeting_start_time.strftime('%H:%M:%S')}\n**Duration:** {datetime.now() - bot.meeting_start_time}\n**Transcript Entries:** {transcript_count}\n**Active Speakers:** {len(participants)}",
+                    inline=False
+                )
+                embed.add_field(
+                    name="🎙️ Real-time Features",
+                    value="✅ Voice channel connected\n✅ Audio transcription active\n✅ Speech-to-text processing\n✅ AI meeting analysis ready",
                     inline=False
                 )
                 embed.add_field(
                     name="🛑 To Stop",
-                    value="Use `/meeting stop` to end recording and generate minutes",
+                    value="Use `/meeting stop` to end recording and generate detailed minutes",
                     inline=False
                 )
             else:
