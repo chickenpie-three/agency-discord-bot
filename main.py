@@ -1338,7 +1338,7 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
         """
         
         enhanced_prompt = f"""
-        Create comprehensive {content_type} for our marketing agency about: {topic}
+        Create comprehensive blog post for our marketing agency about: {topic}
         Target Keywords: {keywords if keywords else 'marketing strategy, content creation, digital marketing, brand development'}
         
         ENTERPRISE CONTENT REQUIREMENTS:
@@ -1397,7 +1397,7 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
         # Create professional marketing embed
         embed = discord.Embed(
             title="📝 Marketing Content Created!",
-            description=f"**Type:** {content_type}\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
+            description=f"**Type:** Blog Post\n**Topic:** {topic}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
             color=bot.agency_config['primary_color']
         )
         
@@ -1435,11 +1435,11 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
 - Modern marketing visual identity integration
         """
         
-        full_content = f"# Marketing Agency {content_type.title()}: {topic}\n\n{seo_analysis}\n\n## Professional Content\n\n{content_result}"
+        full_content = f"# Marketing Agency Blog Post: {topic}\n\n{seo_analysis}\n\n## Professional Content\n\n{content_result}"
         
         # Create downloadable marketing file
         file_buffer = io.BytesIO(full_content.encode('utf-8'))
-        file = discord.File(file_buffer, filename=f"Marketing_Agency_{content_type}_{topic.replace(' ', '_')}.md")
+        file = discord.File(file_buffer, filename=f"Marketing_Agency_Blog_Post_{topic.replace(' ', '_')}.md")
         
         # Smart preview handling for marketing content
         if len(content_result) > 1000:
@@ -1480,9 +1480,11 @@ async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = 
     
     try:
         # Generate image
-        image_file = await bot._generate_nano_banana_image(prompt, style)
+        image_result = await bot._generate_nano_banana_image(prompt, style)
         
-        if image_file:
+        if image_result and image_result.get('success'):
+            image_file = discord.File(image_result['image_path'], filename=f"generated_image_{int(datetime.now().timestamp())}.png")
+            
             embed = discord.Embed(
                 title="🎨 Image Generated",
                 description=f"**Prompt:** {prompt}\n**Style:** {style}",
@@ -1498,8 +1500,15 @@ async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = 
             embed.set_footer(text="Marketing Agency AI Hub • Image Generation")
             
             await interaction.followup.send(embed=embed, files=[image_file])
+            
+            # Clean up temp file
+            try:
+                os.unlink(image_result['image_path'])
+            except:
+                pass
         else:
-            await interaction.followup.send("❌ Failed to generate image. Please try again.")
+            error_msg = image_result.get('error', 'Unknown error') if image_result else 'No response from image generator'
+            await interaction.followup.send(f"❌ Failed to generate image: {error_msg}")
             
     except Exception as e:
         logger.error(f"Image generation error: {e}")
