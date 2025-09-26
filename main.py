@@ -111,15 +111,15 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 
-class MarketingAgencyBot(commands.Bot):
+class CreativeStudioBot(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix='!agency ',
+            command_prefix='!studio ',
             intents=intents,
-            description='Marketing Agency AI Hub - Complete Project Management & Content Creation Suite'
+            description='Creative Studio AI - Unlimited Creative Expression & Artistic Content Hub'
         )
         
-        # Agency configuration
+        # Creative Studio configuration
         def parse_color(color_str, default):
             try:
                 if not color_str or color_str.strip() == '':
@@ -129,44 +129,44 @@ class MarketingAgencyBot(commands.Bot):
             except (ValueError, AttributeError):
                 return int(default.replace('#', ''), 16)
         
-        self.agency_config = {
-            'name': os.getenv('AGENCY_NAME', 'Marketing Pro AI'),
-            'primary_color': parse_color(os.getenv('AGENCY_PRIMARY_COLOR'), '#2563eb'),   # Professional Blue
-            'secondary_color': parse_color(os.getenv('AGENCY_SECONDARY_COLOR'), '#f8fafc'), # Light Gray
-            'accent_color': parse_color(os.getenv('AGENCY_ACCENT_COLOR'), '#10b981'),     # Success Green
-            'warning_color': parse_color(os.getenv('AGENCY_WARNING_COLOR'), '#f59e0b'),   # Warning Orange
-            'error_color': parse_color(os.getenv('AGENCY_ERROR_COLOR'), '#ef4444'),       # Error Red
-            'service_colors': {
-                'Content Creation': '#8b5cf6',      # Purple - Creativity
-                'Strategy Planning': '#3b82f6',     # Blue - Trust
-                'Campaign Management': '#f59e0b',   # Orange - Energy
-                'Analytics & Insights': '#10b981',  # Green - Growth
-                'Project Management': '#6366f1',    # Indigo - Organization
-                'Social Media': '#ec4899',          # Pink - Social
-                'SEO & Marketing': '#06b6d4',       # Cyan - Digital
-                'Brand Development': '#84cc16'      # Lime - Innovation
+        self.studio_config = {
+            'name': os.getenv('STUDIO_NAME', 'Creative Studio AI'),
+            'primary_color': parse_color(os.getenv('STUDIO_PRIMARY_COLOR'), '#8b5cf6'),   # Creative Purple
+            'secondary_color': parse_color(os.getenv('STUDIO_SECONDARY_COLOR'), '#f3f4f6'), # Soft Gray
+            'accent_color': parse_color(os.getenv('STUDIO_ACCENT_COLOR'), '#ec4899'),     # Vibrant Pink
+            'warning_color': parse_color(os.getenv('STUDIO_WARNING_COLOR'), '#f59e0b'),   # Warm Orange
+            'error_color': parse_color(os.getenv('STUDIO_ERROR_COLOR'), '#ef4444'),       # Error Red
+            'creative_colors': {
+                'Content Creation': '#8b5cf6',      # Purple - Imagination
+                'Visual Arts': '#ec4899',           # Pink - Creativity
+                'Storytelling': '#f59e0b',          # Orange - Warmth
+                'Design': '#06b6d4',                # Cyan - Innovation
+                'Music & Audio': '#10b981',         # Green - Harmony
+                'Photography': '#6366f1',           # Indigo - Depth
+                'Writing': '#84cc16',               # Lime - Fresh Ideas
+                'Animation': '#f97316'              # Orange - Energy
             },
             'style_guidelines': (
-                "Modern, clean, and professional marketing agency aesthetic. "
-                "Data-driven approach with creative flair. "
-                "Clear hierarchy and actionable insights. "
-                "Results-oriented with measurable outcomes. "
-                "Client-focused with transparent communication."
+                "Bold, innovative, and artistically driven creative studio aesthetic. "
+                "Unlimited creative expression with no corporate constraints. "
+                "Experimental, boundary-pushing, and authentically artistic. "
+                "Freedom to explore any creative direction or style. "
+                "Inspiring, imaginative, and genuinely creative."
             ),
             'voice_tone': (
-                "Professional yet approachable. "
-                "Data-driven and results-focused. "
-                "Clear, actionable, and strategic. "
-                "Confident without being arrogant. "
-                "Always providing value and insights."
+                "Creative, inspiring, and authentically artistic. "
+                "Unlimited imagination with no corporate boundaries. "
+                "Bold, experimental, and genuinely creative. "
+                "Passionate about art, creativity, and self-expression. "
+                "Always pushing creative boundaries and exploring new ideas."
             ),
-            'tagline': "AI-Powered Marketing Excellence. Results-Driven. Data-Informed.",
+            'tagline': "Unlimited Creative Expression. Art Without Boundaries. Pure Imagination.",
             'core_values': [
-                "Results Over Rhetoric",
-                "Data-Driven Decisions",
-                "Client Success First",
-                "Innovation Through AI",
-                "Transparent Communication"
+                "Creative Freedom Over Constraints",
+                "Artistic Expression Without Limits",
+                "Imagination First, Rules Second",
+                "Innovation Through Pure Creativity",
+                "Authentic Artistic Vision"
             ]
         }
         
@@ -251,72 +251,72 @@ class MarketingAgencyBot(commands.Bot):
         }
         
         # Agency DNA for marketing excellence
-        self.agency_dna = """
-        Marketing Pro AI — Complete Marketing Agency Hub
+        self.studio_dna = """
+        Creative Studio AI — Unlimited Creative Expression Hub
         
-        Agency Profile:
-        - Mission: Empower marketing teams with AI-driven insights, automated content creation, and intelligent project management.
-        - Vision: Become the most trusted AI-powered marketing partner for agencies and businesses worldwide.
-        - Ideal Clients: Marketing agencies, SMBs, startups, e-commerce businesses, SaaS companies, and enterprise marketing teams.
-        - Service Focus: Content creation, strategy planning, campaign management, analytics, and project coordination.
+        Studio Profile:
+        - Mission: Unleash unlimited creative potential through AI-powered artistic expression, free from corporate constraints.
+        - Vision: Become the ultimate creative companion for artists, creators, and anyone seeking authentic artistic expression.
+        - Ideal Creators: Artists, writers, designers, musicians, filmmakers, content creators, and anyone with creative vision.
+        - Creative Focus: Pure artistic expression, experimental content, boundary-pushing creativity, and authentic self-expression.
         
-        Service Portfolio:
-        1) Content Creation & Management
-           - Blog posts, social media content, email campaigns, ad copy, product descriptions
-           - AI-generated images with Nano Banana integration
-           - SEO-optimized content with keyword research
-           - Multi-platform content adaptation
+        Creative Portfolio:
+        1) Visual Arts & Design
+           - AI-generated artwork in any style or medium
+           - Experimental visual concepts and artistic exploration
+           - Custom illustrations, digital art, and creative imagery
+           - Artistic photography and visual storytelling
         
-        2) Strategy & Planning
-           - Marketing strategy development
-           - Campaign planning and execution
-           - Competitive analysis and market research
-           - ROI optimization and performance tracking
+        2) Writing & Storytelling
+           - Creative writing in any genre or style
+           - Poetry, fiction, screenplays, and experimental literature
+           - Personal essays, creative non-fiction, and artistic expression
+           - Unconventional narratives and boundary-pushing stories
         
-        3) Campaign Management
-           - Multi-channel campaign orchestration
-           - Automated workflow creation
-           - A/B testing and optimization
-           - Performance monitoring and reporting
+        3) Content Creation
+           - Social media content with artistic flair
+           - Creative blog posts and articles
+           - Experimental content formats and styles
+           - Authentic, non-corporate messaging and communication
         
-        4) Analytics & Insights
-           - Performance data analysis
-           - ROI calculation and reporting
-           - Trend identification and forecasting
-           - Actionable recommendations
+        4) Creative Projects
+           - Art direction and creative concept development
+           - Experimental multimedia projects
+           - Creative campaign ideas and artistic concepts
+           - Unconventional creative solutions and approaches
         
-        5) Project Management Integration
-           - ClickUp task and project management
-           - Automated task creation and updates
-           - Deadline tracking and notifications
-           - Team collaboration and communication
+        5) Artistic Collaboration
+           - Creative brainstorming and ideation
+           - Artistic feedback and creative direction
+           - Experimental creative techniques and methods
+           - Pure creative expression without commercial constraints
         
-        AI-Powered Capabilities:
-        - Natural language project management
-        - Intelligent content generation with brand consistency
-        - Automated image creation with professional quality
-        - Data-driven insights and recommendations
-        - Seamless platform integrations
+        AI-Powered Creative Capabilities:
+        - Unlimited creative content generation
+        - Artistic image creation with Nano Banana integration
+        - Creative writing in any style or genre
+        - Experimental and boundary-pushing content creation
+        - Pure artistic expression without corporate influence
         
-        Brand Identity:
-        - Palette: Professional Blue (#2563eb), Success Green (#10b981), Warning Orange (#f59e0b)
-        - Style: Modern, clean, data-driven with creative flair
-        - Voice: Professional yet approachable, results-focused, actionable
-        - Approach: AI-enhanced human creativity and strategic thinking
+        Creative Identity:
+        - Palette: Creative Purple (#8b5cf6), Vibrant Pink (#ec4899), Warm Orange (#f59e0b)
+        - Style: Bold, innovative, artistically driven, experimental
+        - Voice: Creative, inspiring, authentically artistic, boundary-pushing
+        - Approach: Pure creativity, unlimited imagination, artistic freedom
         
         Key Differentiators:
-        - Complete marketing workflow automation
-        - AI-powered content creation with professional quality
-        - Integrated project management and task tracking
-        - Real-time analytics and performance insights
-        - Natural language interaction for complex tasks
+        - Complete creative freedom without corporate constraints
+        - AI-powered artistic expression with unlimited possibilities
+        - Experimental and boundary-pushing creative approaches
+        - Authentic artistic vision and genuine creativity
+        - Natural language interaction for complex creative projects
         
-        Success Metrics:
-        - Content engagement and conversion rates
-        - Campaign performance and ROI
-        - Project completion and deadline adherence
-        - Client satisfaction and retention
-        - Team productivity and efficiency gains
+        Creative Success Metrics:
+        - Artistic expression and creative fulfillment
+        - Creative project completion and artistic satisfaction
+        - Creative boundary exploration and artistic growth
+        - Authentic creative expression and artistic vision
+        - Creative inspiration and artistic development
         """
     
     def _initialize_ai_clients(self):
@@ -460,7 +460,7 @@ class MarketingAgencyBot(commands.Bot):
             embed = discord.Embed(
                 title=f"🚀 Project: {project_name}",
                 description="New project channel created with AI analysis",
-                color=self.agency_config['primary_color']
+                color=self.studio_config['primary_color']
             )
             
             embed.add_field(
@@ -733,20 +733,20 @@ class MarketingAgencyBot(commands.Bot):
             config = style_configs.get(style.lower(), style_configs["professional"])
             
             branded_prompt = f"""
-            Create a {style} marketing agency image:
+            Create a {style} creative studio image:
             
             Subject: {prompt}
             Style: {style} - {config['tone']}
             Color Palette: {config['colors']}
             Mood: {config['mood']}
-            Design System: Modern, clean, data-driven with creative flair
-            Photography Style: Bright, professional, showing marketing processes and team collaboration
-            Layout: Clean hierarchy, ample whitespace, decisive composition
-            Quality: Professional-grade, suitable for marketing presentations and campaigns
+            Design System: Bold, innovative, artistically driven with unlimited creative expression
+            Photography Style: Bright, artistic, showing creative processes and artistic collaboration
+            Layout: Creative hierarchy, artistic composition, experimental design
+            Quality: Artistic-grade, suitable for creative projects and artistic expression
             
-            Focus on visual elements that convey marketing expertise and professional agency services.
-            Adapt the visual style to match the {style} aesthetic while maintaining professional quality.
-            Avoid text overlays, clutter, or gimmicks. Clean, professional, results-focused aesthetic.
+            Focus on visual elements that convey creative expertise and artistic studio services.
+            Adapt the visual style to match the {style} aesthetic while maintaining artistic quality.
+            Embrace creative freedom, artistic expression, and boundary-pushing visual concepts.
             """
             
             response = self.ai_clients['nano_banana'].models.generate_content(
@@ -802,25 +802,25 @@ class MarketingAgencyBot(commands.Bot):
         """Get AI response with enhanced marketing agency context"""
         try:
             enhanced_prompt = f"""
-            {self.agency_dna}
+            {self.studio_dna}
             
             Your Expert Role: {system_context}
             
             User Request: {prompt}
             
-            Marketing Agency Guidelines:
-            1. Apply professional marketing agency approach with data-driven insights
-            2. Use clear, actionable language that drives results
-            3. Lead with outcomes and measurable metrics; quantify when possible
-            4. Emphasize ROI and performance optimization
-            5. Position as premium AI-powered marketing solution
-            6. Include relevant case studies, benchmarks, and best practices
-            7. For content, aim for comprehensive, SEO-optimized pieces
-            8. Use service-specific colors and branding appropriately
-            9. Maintain professional yet approachable tone
-            10. Always include clear, conversion-focused calls-to-action
+            Creative Studio Guidelines:
+            1. Apply unlimited creative expression with no corporate constraints
+            2. Use inspiring, artistic language that sparks imagination
+            3. Lead with creative vision and artistic possibilities; explore boundaries
+            4. Emphasize artistic expression and creative fulfillment
+            5. Position as pure creative companion for authentic artistic expression
+            6. Include creative inspiration, artistic techniques, and experimental approaches
+            7. For content, aim for authentic, boundary-pushing creative pieces
+            8. Use creative colors and artistic branding appropriately
+            9. Maintain creative yet inspiring tone
+            10. Always include artistic vision and creative possibilities
             
-            Create expert-level marketing content that positions our agency as the premium AI-powered choice.
+            Create expert-level creative content that positions our studio as the ultimate creative expression companion.
             """
             
             # Try Nano Banana first
@@ -875,7 +875,7 @@ class MarketingAgencyBot(commands.Bot):
             return False
         
     async def setup_hook(self):
-        logger.info("Setting up Marketing Agency AI Hub...")
+        logger.info("Setting up Creative Studio AI...")
         
         # Debug: Check commands before sync
         local_commands = self.tree.get_commands()
@@ -903,7 +903,7 @@ class MarketingAgencyBot(commands.Bot):
                 logger.error(f"Fallback sync failed: {e2}")
     
     async def on_ready(self):
-        logger.info(f'{self.user} connected! Marketing Agency AI Hub active')
+        logger.info(f'{self.user} connected! Creative Studio AI active')
         logger.info(f"AI services: {list(self.ai_clients.keys())}")
         logger.info(f"Nano Banana: {NANO_BANANA_AVAILABLE}")
         logger.info(f"ClickUp integration: {'✅' if self.clickup_config['api_key'] else '❌'}")
@@ -1034,7 +1034,7 @@ class MarketingAgencyBot(commands.Bot):
             embed = discord.Embed(
                 title=f"🚀 New Project: {task_name}",
                 description=task_description[:1000] if task_description else "No description provided",
-                color=self.agency_config["primary_color"],
+                color=self.studio_config["primary_color"],
                 url=task_url if task_url else None
             )
             
@@ -1176,7 +1176,7 @@ Meeting session in voice channel completed successfully.
 - Review action items
 
 ---
-*Generated by Marketing Agency AI Hub Voice Assistant*
+*Generated by Creative Studio AI Voice Assistant*
 """
             
             # Create activity log
@@ -1239,7 +1239,7 @@ Meeting session in voice channel completed successfully.
 {activity_text}
 
 ---
-*Generated by Marketing Agency AI Hub Voice Assistant*
+*Generated by Creative Studio AI Voice Assistant*
 """
             
         except Exception as e:
@@ -1248,7 +1248,7 @@ Meeting session in voice channel completed successfully.
 
 # ===== BOT INSTANCE CREATION =====
 # Create bot instance first so commands can reference it
-bot = MarketingAgencyBot()
+bot = CreativeStudioBot()
 
 # ===== CLICKUP WEBHOOK SERVER =====
 
@@ -1334,7 +1334,7 @@ async def cmd_ask(interaction: discord.Interaction, query: str):
         embed = discord.Embed(
             title="🤖 AI Marketing Assistant",
             description=response,
-            color=bot.agency_config["accent_color"]
+            color=bot.studio_config["accent_color"]
         )
         
         embed.add_field(
@@ -1343,7 +1343,7 @@ async def cmd_ask(interaction: discord.Interaction, query: str):
             inline=False
         )
         
-        embed.set_footer(text="AI-Powered Marketing Excellence • Marketing Agency AI Hub")
+        embed.set_footer(text="AI-Powered Marketing Excellence • Creative Studio AI")
         
         await interaction.followup.send(embed=embed)
         
@@ -1351,33 +1351,33 @@ async def cmd_ask(interaction: discord.Interaction, query: str):
         logger.error(f"Ask command error: {e}")
         await interaction.followup.send(f"❌ Error processing your query: {str(e)}")
 
-@bot.tree.command(name="blog", description="📝 Create professional blog posts with SEO optimization")
-async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str = "", style: str = "professional", target_audience: str = "marketing professionals", include_image: bool = True):
-    """Create professional blog posts"""
+@bot.tree.command(name="blog", description="📝 Create creative blog posts with artistic expression")
+async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str = "", style: str = "creative", target_audience: str = "artists and creators", include_image: bool = True):
+    """Create creative blog posts"""
     await interaction.response.defer(thinking=True)
     
     try:
         system_context = """
-        You are a senior content strategist and marketing expert for a professional marketing agency.
+        You are a creative writer and artistic content creator for a creative studio.
         
         Your expertise includes:
-        - Content strategy and planning
-        - SEO optimization and keyword research
-        - Brand storytelling and messaging
-        - Audience engagement and conversion
-        - Multi-platform content adaptation
+        - Creative writing and storytelling
+        - Artistic expression and creative vision
+        - Authentic content creation without corporate constraints
+        - Creative audience engagement and artistic connection
+        - Multi-platform creative content adaptation
         
         Create blog content that is:
-        - Professional and authoritative
-        - SEO-optimized with natural keyword integration
-        - Engaging and actionable for readers
-        - Aligned with modern marketing best practices
-        - Designed to drive business results
+        - Creative and authentically artistic
+        - Naturally engaging with artistic flair
+        - Inspiring and creatively fulfilling for readers
+        - Aligned with pure creative expression
+        - Designed to spark imagination and artistic inspiration
         """
         
         enhanced_prompt = f"""
-        Create comprehensive blog post for our marketing agency about: {topic}
-        Target Keywords: {keywords if keywords else 'marketing strategy, content creation, digital marketing, brand development'}
+        Create comprehensive blog post for our creative studio about: {topic}
+        Target Keywords: {keywords if keywords else 'creative expression, artistic content, creative writing, artistic inspiration'}
         Writing Style: {style}
         Target Audience: {target_audience}
         
@@ -1386,108 +1386,108 @@ async def cmd_blog(interaction: discord.Interaction, topic: str, keywords: str =
         1. LENGTH: 1500-3000 words (adjust based on style and audience)
         2. TARGET AUDIENCE: {target_audience}
         3. WRITING STYLE: {style} - adapt tone, complexity, and approach accordingly
-        4. MARKETING AGENCY BRAND INTEGRATION:
-           - Professional yet approachable tone
-           - Results-focused messaging
-           - Data-driven insights with creative flair
-           - Modern marketing expertise positioning
+        4. CREATIVE STUDIO BRAND INTEGRATION:
+           - Creative yet inspiring tone
+           - Artistic expression-focused messaging
+           - Creative insights with unlimited imagination
+           - Authentic creative expertise positioning
         
-        5. ADVANCED SEO STRATEGY:
+        5. CREATIVE CONTENT STRATEGY:
            - Primary keyword in title, first 100 words, and conclusion
            - Secondary keywords naturally integrated throughout
-           - Long-tail enterprise keywords (managed virtual teams, offshore CX pod)
-           - Meta title and description optimized for enterprise search intent
-           - Header structure optimized for featured snippets
-           - Internal linking opportunities to marketing agency service pages
+           - Long-tail creative keywords (artistic expression, creative inspiration, artistic vision)
+           - Meta title and description optimized for creative search intent
+           - Header structure optimized for creative discovery
+           - Internal linking opportunities to creative studio service pages
         
-        5. ENTERPRISE CONTENT STRUCTURE:
-           - Executive Summary (key outcomes and ROI upfront)
-           - Market Context and Industry Challenges
-           - Problem Analysis (enterprise pain points and constraints)
-           - Marketing Agency Solution Framework (service offerings, engagement models)
-           - Competitive Differentiation (vs Belay, Time Etc, TaskUs)
-           - Implementation Methodology (pod deployment, governance, SLAs)
-           - ROI Analysis and Business Case
-           - Case Study or Success Story (with metrics)
-           - Strategic Recommendations and Next Steps
-           - Executive Call-to-Action (pilot pod, SOW scoping, fit assessment)
+        6. CREATIVE CONTENT STRUCTURE:
+           - Creative Introduction (artistic vision and inspiration upfront)
+           - Creative Context and Artistic Challenges
+           - Creative Analysis (artistic expression and creative constraints)
+           - Creative Studio Solution Framework (artistic offerings, creative engagement models)
+           - Creative Differentiation (vs traditional agencies, corporate approaches)
+           - Creative Implementation Methodology (artistic process, creative governance, artistic standards)
+           - Creative Impact Analysis and Artistic Case
+           - Creative Case Study or Success Story (with artistic metrics)
+           - Creative Recommendations and Next Steps
+           - Creative Call-to-Action (artistic collaboration, creative exploration, artistic fit assessment)
         
-        6. PROOF POINTS TO INCLUDE:
-           - Specific metrics and ROI data
-           - SLA attainment and quality scorecards
-           - Ramp timelines and time-to-productivity
-           - Security and compliance frameworks
-           - Team composition and governance structures
+        7. CREATIVE PROOF POINTS TO INCLUDE:
+           - Specific creative metrics and artistic impact data
+           - Creative quality and artistic excellence standards
+           - Creative timeline and artistic development processes
+           - Creative standards and artistic integrity frameworks
+           - Creative team composition and artistic collaboration structures
         
-        Create authoritative, evidence-based content that positions our marketing agency as the premium choice.
+        Create inspiring, creative content that positions our creative studio as the ultimate artistic expression companion.
         """
         
         # Generate comprehensive content
-        logger.info(f"Generating enterprise content: {topic}")
+        logger.info(f"Generating creative content: {topic}")
         content_result = await bot._get_ai_response(enhanced_prompt, system_context)
         
-        # Extract enterprise SEO keywords
+        # Extract creative SEO keywords
         seo_keywords = await bot._extract_seo_keywords(content_result)
         
-        # Generate professional marketing image
+        # Generate creative studio image
         image_result = None
         if include_image and NANO_BANANA_AVAILABLE:
-            image_prompt = f"{style} marketing agency header image for article about {topic}. Target audience: {target_audience}. Clean layout, modern marketing aesthetic, professional photography. {style} visual suitable for {target_audience}."
+            image_prompt = f"{style} creative studio header image for article about {topic}. Target audience: {target_audience}. Creative layout, artistic aesthetic, creative photography. {style} visual suitable for {target_audience}."
             image_result = await bot._generate_nano_banana_image(image_prompt, style)
         
-        # Create professional marketing embed
+        # Create creative studio embed
         embed = discord.Embed(
-            title="📝 Marketing Content Created!",
-            description=f"**Type:** Blog Post\n**Topic:** {topic}\n**Style:** {style}\n**Audience:** {target_audience}\n**Length:** {len(content_result)} characters\n**AI-Optimized:** ✅",
-            color=bot.agency_config['primary_color']
+            title="📝 Creative Content Created!",
+            description=f"**Type:** Blog Post\n**Topic:** {topic}\n**Style:** {style}\n**Audience:** {target_audience}\n**Length:** {len(content_result)} characters\n**Artistically Optimized:** ✅",
+            color=bot.studio_config['primary_color']
         )
         
-        # Add marketing SEO analysis
+        # Add creative SEO analysis
         if seo_keywords:
             embed.add_field(
-                name="🔍 Marketing SEO Keywords",
+                name="🔍 Creative SEO Keywords",
                 value=", ".join(seo_keywords[:10]),
                 inline=False
             )
         
-        # Create comprehensive marketing content file
+        # Create comprehensive creative content file
         seo_analysis = f"""
-## Marketing SEO Analysis
-- **Content Length:** {len(content_result)} characters (Professional standard: 2000+ words)
-- **Target Audience:** Marketing professionals, business owners, CMOs
-- **Primary Keywords:** {keywords if keywords else 'Marketing strategy and content'}
+## Creative SEO Analysis
+- **Content Length:** {len(content_result)} characters (Creative standard: 1500+ words)
+- **Target Audience:** {target_audience}
+- **Primary Keywords:** {keywords if keywords else 'Creative expression and artistic content'}
 - **Extracted Keywords:** {', '.join(seo_keywords)}
-- **Brand System:** Professional marketing agency integrated
-- **Competitive Positioning:** Premium AI-powered marketing solutions
-- **Optimization Status:** ✅ Marketing SEO Optimized
+- **Brand System:** Creative studio integrated
+- **Competitive Positioning:** Unlimited creative expression and artistic freedom
+- **Optimization Status:** ✅ Creative SEO Optimized
 
-## Marketing Agency Brand Integration
-- **Voice:** Professional yet approachable, results-focused
-- **Positioning:** Premium AI-powered marketing agency
-- **Approach:** Data-driven with creative flair
-- **Governance:** ROI-focused, performance-driven delivery
-- **Image Pairing:** {'✅ Professional marketing image generated' if image_result and image_result.get('success') else '❌ Image generation not available'}
+## Creative Studio Brand Integration
+- **Voice:** Creative yet inspiring, artistic expression-focused
+- **Positioning:** Unlimited creative expression companion
+- **Approach:** Pure creativity with unlimited imagination
+- **Governance:** Artistic integrity, creative freedom-driven delivery
+- **Image Pairing:** {'✅ Creative studio image generated' if image_result and image_result.get('success') else '❌ Image generation not available'}
 
-## Marketing Messaging Framework
-- Results-first, data-backed content
-- AI-enhanced marketing vs traditional approaches
-- Performance optimization and ROI focus
-- Professional expertise as competitive differentiator
-- Modern marketing visual identity integration
+## Creative Messaging Framework
+- Art-first, creativity-backed content
+- AI-enhanced creativity vs traditional approaches
+- Creative expression optimization and artistic fulfillment focus
+- Creative expertise as artistic differentiator
+- Modern creative visual identity integration
         """
         
-        full_content = f"# Marketing Agency Blog Post: {topic}\n\n{seo_analysis}\n\n## Professional Content\n\n{content_result}"
+        full_content = f"# Creative Studio Blog Post: {topic}\n\n{seo_analysis}\n\n## Creative Content\n\n{content_result}"
         
-        # Create downloadable marketing file
+        # Create downloadable creative file
         file_buffer = io.BytesIO(full_content.encode('utf-8'))
-        file = discord.File(file_buffer, filename=f"Marketing_Agency_Blog_Post_{topic.replace(' ', '_')}.md")
+        file = discord.File(file_buffer, filename=f"Creative_Studio_Blog_Post_{topic.replace(' ', '_')}.md")
         
-        # Smart preview handling for marketing content
+        # Smart preview handling for creative content
         if len(content_result) > 1000:
-            embed.add_field(name="📋 Marketing Summary", value=content_result[:1000], inline=False)
+            embed.add_field(name="📋 Creative Summary", value=content_result[:1000], inline=False)
             if len(content_result) > 2000:
                 embed.add_field(name="📋 Content Preview", value=content_result[1000:2000], inline=False)
-                embed.add_field(name="📄 Complete Marketing Content", value="See attached file for full article with marketing analysis", inline=False)
+                embed.add_field(name="📄 Complete Creative Content", value="See attached file for full article with creative analysis", inline=False)
             else:
                 embed.add_field(name="📋 Content Continuation", value=content_result[1000:], inline=False)
         else:
@@ -1522,7 +1522,7 @@ async def cmd_styles(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🎨 Available Styles & Options",
         description="Customize your content generation with these style options:",
-        color=bot.agency_config['accent_color']
+        color=bot.studio_config['accent_color']
     )
     
     # Blog styles
@@ -1557,13 +1557,13 @@ async def cmd_styles(interaction: discord.Interaction):
     embed.add_field(
         name="👥 Target Audiences",
         value="""
-**marketing professionals** - CMOs, marketing managers, agencies
-**business owners** - Entrepreneurs, small business owners
-**startups** - Early-stage companies, founders
-**enterprise** - Large corporations, executives
-**consumers** - General public, end users
-**developers** - Technical teams, engineers
-**students** - Learners, educational content
+**artists and creators** - Visual artists, writers, designers, musicians
+**creative professionals** - Filmmakers, photographers, content creators
+**creative entrepreneurs** - Creative business owners, artistic startups
+**creative communities** - Art collectives, creative groups, artistic communities
+**creative enthusiasts** - Art lovers, creative hobbyists, artistic explorers
+**creative students** - Art students, creative learners, artistic education
+**creative visionaries** - Innovative creators, boundary-pushing artists
         """,
         inline=False
     )
@@ -1571,14 +1571,14 @@ async def cmd_styles(interaction: discord.Interaction):
     embed.add_field(
         name="💡 Usage Examples",
         value="""
-`/blog topic:"AI Marketing" style:creative audience:startups`
-`/image prompt:"team meeting" style:minimalist`
-`/blog topic:"SEO Tips" style:educational audience:business owners`
+`/blog topic:"Creative Expression" style:creative audience:artists and creators`
+`/image prompt:"artistic workspace" style:minimalist`
+`/blog topic:"Artistic Inspiration" style:storytelling audience:creative communities`
         """,
         inline=False
     )
     
-    embed.set_footer(text="Marketing Agency AI Hub • Custom Content Generation")
+    embed.set_footer(text="Creative Studio AI • Custom Content Generation")
     
     await interaction.followup.send(embed=embed)
 
@@ -1597,7 +1597,7 @@ async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = 
             embed = discord.Embed(
                 title="🎨 Image Generated",
                 description=f"**Prompt:** {prompt}\n**Style:** {style}",
-                color=bot.agency_config['accent_color']
+                color=bot.studio_config['accent_color']
             )
             
             embed.add_field(
@@ -1606,7 +1606,7 @@ async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = 
                 inline=False
             )
             
-            embed.set_footer(text="Marketing Agency AI Hub • Image Generation")
+            embed.set_footer(text="Creative Studio AI • Image Generation")
             
             await interaction.followup.send(embed=embed, files=[image_file])
             
@@ -1655,7 +1655,7 @@ async def cmd_carousel(interaction: discord.Interaction, topic: str, slides: int
         embed = discord.Embed(
             title="📱 Carousel Content Created",
             description=f"**Topic:** {topic}\n**Slides:** {slides}",
-            color=bot.agency_config['accent_color']
+            color=bot.studio_config['accent_color']
         )
         
         embed.add_field(
@@ -1664,7 +1664,7 @@ async def cmd_carousel(interaction: discord.Interaction, topic: str, slides: int
             inline=False
         )
         
-        embed.set_footer(text="Marketing Agency AI Hub • Carousel Creation")
+        embed.set_footer(text="Creative Studio AI • Carousel Creation")
         
         await interaction.followup.send(embed=embed)
         
@@ -1712,7 +1712,7 @@ async def cmd_spinoff(interaction: discord.Interaction, blog_content: str, platf
         embed = discord.Embed(
             title="🚀 Social Media Posts Created",
             description=f"**Platforms:** {platforms}\n**Based on:** Blog content analysis",
-            color=bot.agency_config['accent_color']
+            color=bot.studio_config['accent_color']
         )
         
         # Split long content into multiple fields
@@ -1731,7 +1731,7 @@ async def cmd_spinoff(interaction: discord.Interaction, blog_content: str, platf
                 inline=False
             )
         
-        embed.set_footer(text="Marketing Agency AI Hub • Content Spinoff")
+        embed.set_footer(text="Creative Studio AI • Content Spinoff")
         
         await interaction.followup.send(embed=embed)
         
@@ -1745,7 +1745,7 @@ async def cmd_spinoff(interaction: discord.Interaction, blog_content: str, platf
 async def cmd_test(interaction: discord.Interaction):
     try:
         embed = discord.Embed(
-            title="✅ Marketing Agency AI Hub",
+            title="✅ Creative Studio AI",
             description="Professional marketing agency system active • AI agents ready",
             color=bot.brand_config['primary_color']
         )
@@ -1796,7 +1796,7 @@ async def cmd_upload(interaction: discord.Interaction, file: discord.Attachment)
             embed = discord.Embed(
                 title="📁 File Uploaded & Analyzed!",
                 description=f"**File:** {file.filename}\n**Project:** {project_name}\n**Channel:** {channel.mention}",
-                color=bot.agency_config['primary_color']
+                color=bot.studio_config['primary_color']
             )
             
             embed.add_field(
@@ -1836,7 +1836,7 @@ async def cmd_create_project(interaction: discord.Interaction, project_name: str
             embed = discord.Embed(
                 title="🚀 New Project Created!",
                 description=f"**Project:** {project_name}\n**Channel:** {channel.mention}",
-                color=bot.agency_config['accent_color']
+                color=bot.studio_config['accent_color']
             )
             
             embed.add_field(
@@ -1871,7 +1871,7 @@ async def cmd_clickup(interaction: discord.Interaction, action: str, task_name: 
                 embed = discord.Embed(
                     title="📋 ClickUp Tasks",
                     description=f"Found {len(tasks['tasks'])} tasks",
-                    color=bot.agency_config['primary_color']
+                    color=bot.studio_config['primary_color']
                 )
                 
                 for i, task in enumerate(tasks['tasks'][:10]):  # Show first 10
@@ -1898,7 +1898,7 @@ async def cmd_clickup(interaction: discord.Interaction, action: str, task_name: 
             embed = discord.Embed(
                 title="📝 Task Creation",
                 description="Task creation requires a ClickUp list ID. Use the ClickUp web interface to get the list ID, then we can create tasks programmatically.",
-                color=bot.agency_config['warning_color']
+                color=bot.studio_config['warning_color']
             )
             
             embed.add_field(
@@ -1928,7 +1928,7 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
         embed = discord.Embed(
             title="🧪 UAT Testing Agent",
             description=f"Analyzing website: {website_url}",
-            color=bot.agency_config['primary_color']
+            color=bot.studio_config['primary_color']
         )
         
         embed.add_field(
@@ -1948,7 +1948,7 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
                 error_embed = discord.Embed(
                     title="⚠️ Website Blocked Automated Analysis",
                     description=f"**Issue:** {website_data['error']}\n\n**Solution:** This website has anti-bot protection. You can still get a UAT report based on manual testing.",
-                    color=bot.agency_config['warning_color']
+                    color=bot.studio_config['warning_color']
                 )
                 
                 error_embed.add_field(
@@ -1969,7 +1969,7 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
                 error_embed = discord.Embed(
                     title="❌ UAT Testing Failed",
                     description=f"Could not analyze website: {website_data['error']}",
-                    color=bot.agency_config['error_color']
+                    color=bot.studio_config['error_color']
                 )
                 await interaction.followup.send(embed=error_embed)
                 return
@@ -1981,7 +1981,7 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
         report_embed = discord.Embed(
             title="📋 UAT Testing Report",
             description=f"**Website:** {website_data['url']}\n**Title:** {website_data['title']}",
-            color=bot.agency_config['accent_color']
+            color=bot.studio_config['accent_color']
         )
         
         # Add website analysis summary
@@ -2077,7 +2077,7 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
 - **Backup:** Maintain copies of important UAT reports in your preferred storage system
 
 ---
-*Report generated by Marketing Agency AI Hub UAT Testing Agent*
+*Report generated by Creative Studio AI UAT Testing Agent*
 *Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 """
         
@@ -2098,7 +2098,7 @@ async def cmd_show_sops(interaction: discord.Interaction):
         embed = discord.Embed(
             title="📋 UAT Testing SOPs",
             description="8 Marketing Agency Standard Operating Procedures for website testing",
-            color=bot.agency_config['primary_color']
+            color=bot.studio_config['primary_color']
         )
         
         for sop_name, sop_items in bot.uat_sops.items():
@@ -2134,7 +2134,7 @@ async def cmd_sync(interaction: discord.Interaction):
         embed = discord.Embed(
             title="🔄 Commands Synced Successfully",
             description=f"Synced {len(synced)} commands to Discord",
-            color=bot.agency_config['accent_color']
+            color=bot.studio_config['accent_color']
         )
         
         # List all synced commands
@@ -2165,8 +2165,8 @@ async def cmd_status(interaction: discord.Interaction):
         
         embed = discord.Embed(
             title="📊 Bot Status & Health",
-            description="Marketing Agency AI Hub system information",
-            color=bot.agency_config['accent_color']
+            description="Creative Studio AI system information",
+            color=bot.studio_config['accent_color']
         )
         
         embed.add_field(
@@ -2236,7 +2236,7 @@ async def cmd_webhook_status(interaction: discord.Interaction):
         embed = discord.Embed(
             title="🔗 ClickUp Webhook Integration",
             description="Automatic Discord channel creation from ClickUp tasks",
-            color=bot.agency_config["accent_color"]
+            color=bot.studio_config["accent_color"]
         )
         
         embed.add_field(
@@ -2269,7 +2269,7 @@ async def cmd_webhook_status(interaction: discord.Interaction):
             inline=True
         )
         
-        embed.set_footer(text="ClickUp Webhook Automation • Marketing Agency AI Hub")
+        embed.set_footer(text="ClickUp Webhook Automation • Creative Studio AI")
         
         await interaction.response.send_message(embed=embed)
         
@@ -2280,9 +2280,9 @@ async def cmd_webhook_status(interaction: discord.Interaction):
 async def cmd_help(interaction: discord.Interaction):
     try:
         embed = discord.Embed(
-            title="🤖 Marketing Agency AI Hub",
+            title="🤖 Creative Studio AI",
             description="Complete project management & content creation suite • AI-powered marketing excellence",
-            color=bot.agency_config['primary_color']
+            color=bot.studio_config['primary_color']
         )
         
         embed.add_field(
@@ -2356,7 +2356,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 embed = discord.Embed(
                     title="🎤 Voice Meeting Started",
                     description=f"Bot joined **{channel.name}** and is now recording!",
-                    color=bot.agency_config["accent_color"]
+                    color=bot.studio_config["accent_color"]
                 )
                 embed.add_field(
                     name="📝 What's Happening",
@@ -2368,7 +2368,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                     value="Use `/meeting stop` when your meeting is finished",
                     inline=False
                 )
-                embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+                embed.set_footer(text="Voice Meeting Assistant • Creative Studio AI")
                 
                 await interaction.response.send_message(embed=embed)
             else:
@@ -2405,7 +2405,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 embed = discord.Embed(
                     title="📝 Meeting Minutes Generated",
                     description=f"**Meeting:** {interaction.channel.name}\n**Duration:** {bot.meeting_start_time.strftime('%H:%M')} - {datetime.now().strftime('%H:%M')}",
-                    color=bot.agency_config["accent_color"]
+                    color=bot.studio_config["accent_color"]
                 )
                 # Split long minutes into multiple fields or use description
                 if len(minutes) > 1024:
@@ -2417,7 +2417,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                         value=minutes,
                         inline=False
                     )
-                embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+                embed.set_footer(text="Voice Meeting Assistant • Creative Studio AI")
                 
                 await huddle_channel.send(embed=embed)
                 await interaction.followup.send("✅ Meeting minutes generated and posted to #huddle-minutes!")
@@ -2436,7 +2436,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 embed = discord.Embed(
                     title="🎤 Meeting Status: Active",
                     description=f"Bot is tracking meeting in **{bot.voice_client.channel.name}**",
-                    color=bot.agency_config["accent_color"]
+                    color=bot.studio_config["accent_color"]
                 )
                 embed.add_field(
                     name="📊 Meeting Stats",
@@ -2457,7 +2457,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                 embed = discord.Embed(
                     title="🎤 Meeting Status: Inactive",
                     description="Bot is not currently in any voice channel",
-                    color=bot.agency_config["error_color"]
+                    color=bot.studio_config["error_color"]
                 )
                 embed.add_field(
                     name="🚀 To Start",
@@ -2465,7 +2465,7 @@ async def cmd_meeting(interaction: discord.Interaction, action: str, channel: di
                     inline=False
                 )
             
-            embed.set_footer(text="Voice Meeting Assistant • Marketing Agency AI Hub")
+            embed.set_footer(text="Voice Meeting Assistant • Creative Studio AI")
             await interaction.response.send_message(embed=embed)
             
         else:
@@ -2523,7 +2523,7 @@ if __name__ == "__main__":
         try:
             # Start ClickUp webhook server
             run_webhook_server()
-            logger.info("Starting Marketing Agency AI Hub...")
+            logger.info("Starting Creative Studio AI...")
             bot.run(token)
         except discord.errors.LoginFailure:
             logger.error("❌ Invalid Discord bot token!")
