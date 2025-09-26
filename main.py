@@ -651,7 +651,7 @@ class MarketingAgencyBot(commands.Bot):
             Format as a professional UAT report with clear sections and actionable insights for marketing teams.
             """
             
-            return await self._get_ai_response(prompt, "Marketing UAT Testing Expert")
+            return await self._get_ai_response(prompt, "Marketing UAT Testing Expert", max_length=3000)
             
         except Exception as e:
             logger.error(f"UAT report generation error: {e}")
@@ -1161,17 +1161,22 @@ Meeting session in voice channel completed successfully.
             Participants: {', '.join(participants)}
             Total Participants: {meeting_summary['total_participants']}
             
-            Meeting Activity:
+            Meeting Activity Log:
             {activity_text}
             
-            Please create structured meeting minutes with:
-            1. Executive Summary
-            2. Attendance Summary
-            3. Meeting Flow Analysis
-            4. Recommended Next Steps
-            5. Action Items (general recommendations)
+            Based on this voice meeting session, create comprehensive meeting minutes that focus on:
+            1. Executive Summary - What was the main purpose and outcome of this meeting?
+            2. Key Discussion Points - What topics were likely discussed during this {str(duration).split('.')[0]} session?
+            3. Decisions Made - What decisions were probably reached during the meeting?
+            4. Action Items - What follow-up tasks should be assigned based on this meeting?
+            5. Next Steps - What are the recommended next actions for the team?
             
-            Make it professional and actionable for a marketing agency context.
+            Since this was a voice meeting, provide intelligent analysis of what was likely discussed based on:
+            - Meeting duration ({str(duration).split('.')[0]})
+            - Number of participants ({len(participants)})
+            - Meeting context (marketing agency)
+            
+            Make it professional, actionable, and focused on business outcomes rather than just attendance tracking.
             """
             
             ai_minutes = await self._get_ai_response(
@@ -1719,15 +1724,10 @@ async def cmd_uat_testing(interaction: discord.Interaction, website_url: str, cu
             inline=False
         )
         
-        # Add UAT report
+        # Add UAT report - use description for long content to avoid field limits
         if len(uat_report) > 1024:
-            chunks = [uat_report[i:i+1020] for i in range(0, len(uat_report), 1020)]
-            for i, chunk in enumerate(chunks[:3]):  # Limit to 3 chunks
-                report_embed.add_field(
-                    name=f"📋 UAT Report {f'(Part {i+1})' if len(chunks) > 1 else ''}",
-                    value=chunk,
-                    inline=False
-                )
+            # Use description for long UAT reports (up to 4096 chars)
+            report_embed.description = f"**Website:** {website_data['url']}\n**Title:** {website_data['title']}\n\n{uat_report[:3500]}{'...' if len(uat_report) > 3500 else ''}"
         else:
             report_embed.add_field(
                 name="📋 UAT Report",
