@@ -809,13 +809,27 @@ class CreativeStudioBot(commands.Bot):
                     
                     if Image:
                         image = Image.open(io.BytesIO(image_data))
+                        
+                        # For logo generation, ensure transparent background
+                        if any(keyword in prompt.lower() for keyword in ['logo', 'icon', 'wordmark', 'combination']):
+                            # Convert to RGBA if not already
+                            if image.mode != 'RGBA':
+                                image = image.convert('RGBA')
+                            
+                            # Create a new image with transparent background
+                            transparent_image = Image.new('RGBA', image.size, (0, 0, 0, 0))
+                            
+                            # Paste the original image onto transparent background
+                            transparent_image.paste(image, (0, 0), image)
+                            image = transparent_image
+                        
                         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-                        image.save(temp_file.name, 'PNG')
+                        image.save(temp_file.name, 'PNG', optimize=True)
                         
                         return {
                             "success": True,
                             "image_path": temp_file.name,
-                            "description": "Professional marketing agency image generated",
+                            "description": "Professional marketing agency image generated with transparent background",
                             "model": "gemini-2.5-flash-image-preview"
                         }
             
@@ -1715,6 +1729,214 @@ async def cmd_image(interaction: discord.Interaction, prompt: str, style: str = 
             
     except Exception as e:
         logger.error(f"Image generation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="logo", description="🎨 Generate logo icon - transparent PNG with no background")
+async def cmd_logo_icon(interaction: discord.Interaction, company_name: str, industry: str = "general", style: str = "modern", description: str = ""):
+    """Generate a logo icon using Nano Banana AI"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Create detailed prompt for logo icon generation
+        logo_prompt = f"""
+        Create a professional logo ICON for "{company_name}" in the {industry} industry.
+        
+        Requirements:
+        - ICON ONLY (no text, no wordmark)
+        - Transparent background (PNG format)
+        - {style} design style
+        - Professional and memorable
+        - Scalable for various sizes
+        - Industry-appropriate symbolism
+        
+        Company: {company_name}
+        Industry: {industry}
+        Style: {style}
+        Description: {description if description else "Professional business logo"}
+        
+        Generate a clean, minimalist icon that represents the brand identity.
+        """
+        
+        # Generate the logo using Nano Banana
+        logo_result = await bot._generate_nano_banana_image(logo_prompt, style)
+        
+        if logo_result and logo_result.get('success'):
+            logo_file = discord.File(logo_result['image_path'], filename=f"{company_name.replace(' ', '_')}_logo_icon.png")
+            
+            embed = discord.Embed(
+                title="🎨 Logo Icon Generated!",
+                description=f"**Company:** {company_name}\n**Industry:** {industry}\n**Style:** {style}",
+                color=0x8b5cf6
+            )
+            embed.set_image(url=f"attachment://{logo_file.filename}")
+            embed.add_field(name="📁 File", value=f"`{logo_file.filename}`", inline=True)
+            embed.add_field(name="🎯 Type", value="Logo Icon", inline=True)
+            embed.add_field(name="🖼️ Format", value="Transparent PNG", inline=True)
+            
+            await interaction.followup.send(embed=embed, file=logo_file)
+        else:
+            await interaction.followup.send("❌ Failed to generate logo icon. Please try again.")
+            
+    except Exception as e:
+        logger.error(f"Logo icon generation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="wordmark", description="📝 Generate logo wordmark - text-based logo with transparent background")
+async def cmd_logo_wordmark(interaction: discord.Interaction, company_name: str, industry: str = "general", style: str = "modern", font_style: str = "clean"):
+    """Generate a logo wordmark using Nano Banana AI"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Create detailed prompt for wordmark generation
+        wordmark_prompt = f"""
+        Create a professional logo WORDMARK for "{company_name}" in the {industry} industry.
+        
+        Requirements:
+        - TEXT/LOGO TYPE ONLY (company name as the main element)
+        - Transparent background (PNG format)
+        - {style} design style with {font_style} typography
+        - Professional and readable
+        - Scalable for various sizes
+        - Industry-appropriate styling
+        
+        Company: {company_name}
+        Industry: {industry}
+        Style: {style}
+        Typography: {font_style}
+        
+        Generate a clean, professional wordmark that emphasizes the company name with appropriate styling.
+        """
+        
+        # Generate the wordmark using Nano Banana
+        wordmark_result = await bot._generate_nano_banana_image(wordmark_prompt, style)
+        
+        if wordmark_result and wordmark_result.get('success'):
+            wordmark_file = discord.File(wordmark_result['image_path'], filename=f"{company_name.replace(' ', '_')}_wordmark.png")
+            
+            embed = discord.Embed(
+                title="📝 Logo Wordmark Generated!",
+                description=f"**Company:** {company_name}\n**Industry:** {industry}\n**Style:** {style}",
+                color=0x8b5cf6
+            )
+            embed.set_image(url=f"attachment://{wordmark_file.filename}")
+            embed.add_field(name="📁 File", value=f"`{wordmark_file.filename}`", inline=True)
+            embed.add_field(name="🎯 Type", value="Logo Wordmark", inline=True)
+            embed.add_field(name="🖼️ Format", value="Transparent PNG", inline=True)
+            
+            await interaction.followup.send(embed=embed, file=wordmark_file)
+        else:
+            await interaction.followup.send("❌ Failed to generate logo wordmark. Please try again.")
+            
+    except Exception as e:
+        logger.error(f"Logo wordmark generation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="combination", description="🔗 Generate logo combination - icon + wordmark together")
+async def cmd_logo_combination(interaction: discord.Interaction, company_name: str, industry: str = "general", style: str = "modern", layout: str = "horizontal"):
+    """Generate a logo combination using Nano Banana AI"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Create detailed prompt for combination logo generation
+        combination_prompt = f"""
+        Create a professional COMBINATION LOGO for "{company_name}" in the {industry} industry.
+        
+        Requirements:
+        - ICON + WORDMARK COMBINED (both icon and company name together)
+        - Transparent background (PNG format)
+        - {style} design style
+        - {layout} layout (icon and text arrangement)
+        - Professional and balanced composition
+        - Scalable for various sizes
+        - Industry-appropriate design
+        
+        Company: {company_name}
+        Industry: {industry}
+        Style: {style}
+        Layout: {layout}
+        
+        Generate a complete logo that combines both an icon and the company name in a professional, balanced design.
+        """
+        
+        # Generate the combination logo using Nano Banana
+        combination_result = await bot._generate_nano_banana_image(combination_prompt, style)
+        
+        if combination_result and combination_result.get('success'):
+            combination_file = discord.File(combination_result['image_path'], filename=f"{company_name.replace(' ', '_')}_combination_logo.png")
+            
+            embed = discord.Embed(
+                title="🔗 Logo Combination Generated!",
+                description=f"**Company:** {company_name}\n**Industry:** {industry}\n**Style:** {style}",
+                color=0x8b5cf6
+            )
+            embed.set_image(url=f"attachment://{combination_file.filename}")
+            embed.add_field(name="📁 File", value=f"`{combination_file.filename}`", inline=True)
+            embed.add_field(name="🎯 Type", value="Logo Combination", inline=True)
+            embed.add_field(name="🖼️ Format", value="Transparent PNG", inline=True)
+            
+            await interaction.followup.send(embed=embed, file=combination_file)
+        else:
+            await interaction.followup.send("❌ Failed to generate logo combination. Please try again.")
+            
+    except Exception as e:
+        logger.error(f"Logo combination generation error: {e}")
+        await interaction.followup.send(f"❌ Error: {str(e)}")
+
+@bot.tree.command(name="logo_family", description="👨‍👩‍👧‍👦 Generate complete logo family - icon, wordmark, and combination")
+async def cmd_logo_family(interaction: discord.Interaction, company_name: str, industry: str = "general", style: str = "modern"):
+    """Generate a complete logo family using Nano Banana AI"""
+    await interaction.response.defer(thinking=True)
+    
+    try:
+        # Generate all three logo types
+        icon_prompt = f"Create a professional logo ICON for '{company_name}' in the {industry} industry. ICON ONLY, transparent background, {style} style."
+        wordmark_prompt = f"Create a professional logo WORDMARK for '{company_name}' in the {industry} industry. TEXT ONLY, transparent background, {style} style."
+        combination_prompt = f"Create a professional COMBINATION LOGO for '{company_name}' in the {industry} industry. ICON + WORDMARK together, transparent background, {style} style."
+        
+        # Generate all three logos
+        icon_result = await bot._generate_nano_banana_image(icon_prompt, style)
+        wordmark_result = await bot._generate_nano_banana_image(wordmark_prompt, style)
+        combination_result = await bot._generate_nano_banana_image(combination_prompt, style)
+        
+        files = []
+        embed = discord.Embed(
+            title="👨‍👩‍👧‍👦 Complete Logo Family Generated!",
+            description=f"**Company:** {company_name}\n**Industry:** {industry}\n**Style:** {style}",
+            color=0x8b5cf6
+        )
+        
+        # Add each logo file if successful
+        if icon_result and icon_result.get('success'):
+            icon_file = discord.File(icon_result['image_path'], filename=f"{company_name.replace(' ', '_')}_icon.png")
+            files.append(icon_file)
+            embed.add_field(name="🎨 Logo Icon", value="✅ Generated", inline=True)
+        else:
+            embed.add_field(name="🎨 Logo Icon", value="❌ Failed", inline=True)
+            
+        if wordmark_result and wordmark_result.get('success'):
+            wordmark_file = discord.File(wordmark_result['image_path'], filename=f"{company_name.replace(' ', '_')}_wordmark.png")
+            files.append(wordmark_file)
+            embed.add_field(name="📝 Logo Wordmark", value="✅ Generated", inline=True)
+        else:
+            embed.add_field(name="📝 Logo Wordmark", value="❌ Failed", inline=True)
+            
+        if combination_result and combination_result.get('success'):
+            combination_file = discord.File(combination_result['image_path'], filename=f"{company_name.replace(' ', '_')}_combination.png")
+            files.append(combination_file)
+            embed.add_field(name="🔗 Logo Combination", value="✅ Generated", inline=True)
+        else:
+            embed.add_field(name="🔗 Logo Combination", value="❌ Failed", inline=True)
+        
+        embed.add_field(name="🖼️ Format", value="Transparent PNG", inline=False)
+        embed.add_field(name="📁 Files", value=f"{len(files)} logo files attached", inline=False)
+        
+        if files:
+            await interaction.followup.send(embed=embed, files=files)
+        else:
+            await interaction.followup.send("❌ Failed to generate any logos. Please try again.")
+            
+    except Exception as e:
+        logger.error(f"Logo family generation error: {e}")
         await interaction.followup.send(f"❌ Error: {str(e)}")
 
 @bot.tree.command(name="carousel", description="📱 Create social media carousel content")
