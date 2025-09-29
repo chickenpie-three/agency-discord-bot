@@ -22,6 +22,55 @@ from aiohttp import web
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
+# Reconnect FIX - when disconnected or restarted
+class ResumeHandler(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        bot.add_listener(self.on_resumed, "on_resumed")
+        bot.add_listener(self.on_disconnect, "on_disconnect")
+
+    async def on_resumed(self):
+        print("🔄 Bot resume event detected! Ensuring commands are working...")
+        try:
+            # Re-login if needed
+            if not self.bot.is_ready():
+                await self.bot.login(os.getenv("DISCORD_TOKEN"))
+                print("✅ Reconnect login successful.")
+            
+            # CRITICAL: Re-sync commands to ensure they work after reconnection
+            try:
+                synced = await self.bot.tree.sync()
+                print(f"✅ Commands re-synced after resume: {len(synced)} commands available")
+                logger.info(f"✅ Commands re-synced after resume: {len(synced)} commands available")
+            except Exception as sync_error:
+                print(f"❌ Command sync failed after resume: {sync_error}")
+                logger.error(f"❌ Command sync failed after resume: {sync_error}")
+            
+            # Verify bot is ready and commands are working
+            if self.bot.is_ready():
+                print("✅ Bot fully operational with commands restored")
+                logger.info("✅ Bot fully operational with commands restored")
+            else:
+                print("⚠️ Bot reconnected but not fully ready")
+                logger.warning("⚠️ Bot reconnected but not fully ready")
+                
+        except Exception as e:
+            print(f"❌ Resume failed: {e}. Retrying...")
+            logger.error(f"❌ Resume failed: {e}")
+            # Retry after a delay
+            await asyncio.sleep(5)
+            try:
+                await self.bot.login(os.getenv("DISCORD_TOKEN"))
+                await self.bot.tree.sync()
+                print("✅ Retry successful - commands restored")
+            except Exception as retry_error:
+                print(f"❌ Retry failed: {retry_error}")
+                logger.error(f"❌ Retry failed: {retry_error}")
+
+    async def on_disconnect(self):
+        print("⚠️ Bot disconnected - will attempt to restore commands on reconnect")
+        logger.warning("⚠️ Bot disconnected - will attempt to restore commands on reconnect")
+
 # Simplified Voice Meeting System (without discord.sinks)
 class SimpleMeetingTracker:
     """Simple meeting tracker without audio recording"""
@@ -914,6 +963,17 @@ class CreativeStudioBot(commands.Bot):
             logger.info(f"✅ Commands synced on ready: {len(synced)} commands available")
         except Exception as e:
             logger.error(f"Ready sync error: {e}")
+        
+        # Add ResumeHandler for reconnection handling
+        try:
+            await self.add_cog(ResumeHandler(self))
+            logger.info("✅ ResumeHandler cog loaded for reconnection handling")
+        except Exception as e:
+            logger.error(f"Failed to load ResumeHandler: {e}")
+        
+        # Start command health monitoring task
+        self.loop.create_task(self.command_health_monitor())
+        
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Marketing Agency operations"))
     
     async def on_message(self, message):
@@ -928,6 +988,40 @@ class CreativeStudioBot(commands.Bot):
         # Check if bot can see the message
         if message.content.startswith('!ping'):
             await message.channel.send("Pong! Bot is responding to messages.")
+
+    async def command_health_monitor(self):
+        """Monitor command health and re-sync if needed"""
+        while True:
+            try:
+                await asyncio.sleep(300)  # Check every 5 minutes
+                
+                # Only run health check if bot is ready
+                if not self.is_ready():
+                    continue
+                
+                # Check if commands are still synced by testing tree access
+                try:
+                    # Try to access the command tree - if this fails, commands might be broken
+                    command_count = len(self.tree.get_commands())
+                    if command_count == 0:
+                        logger.warning("⚠️ No commands found in tree - attempting to re-sync")
+                        synced = await self.tree.sync()
+                        logger.info(f"✅ Commands re-synced by health monitor: {len(synced)} commands")
+                    else:
+                        logger.debug(f"✅ Command health check passed: {command_count} commands available")
+                        
+                except Exception as health_error:
+                    logger.error(f"❌ Command health check failed: {health_error}")
+                    # Attempt to re-sync commands
+                    try:
+                        synced = await self.tree.sync()
+                        logger.info(f"✅ Commands re-synced after health check failure: {len(synced)} commands")
+                    except Exception as sync_error:
+                        logger.error(f"❌ Failed to re-sync commands after health check: {sync_error}")
+                        
+            except Exception as e:
+                logger.error(f"❌ Command health monitor error: {e}")
+                await asyncio.sleep(60)  # Wait 1 minute before retrying
 
     # ===== CLICKUP WEBHOOK AUTOMATION =====
     
