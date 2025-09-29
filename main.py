@@ -70,6 +70,12 @@ class ResumeHandler(commands.Cog):
     async def on_disconnect(self):
         print("⚠️ Bot disconnected - will attempt to restore commands on reconnect")
         logger.warning("⚠️ Bot disconnected - will attempt to restore commands on reconnect")
+    
+    async def on_error(self, event, *args, **kwargs):
+        """Handle Discord client errors"""
+        logger.error(f"Discord client error in event {event}: {args}")
+        import traceback
+        logger.error(f"Error traceback: {traceback.format_exc()}")
 
 # Simplified Voice Meeting System (without discord.sinks)
 class SimpleMeetingTracker:
@@ -1397,10 +1403,20 @@ def start_webhook_server():
         port = int(os.getenv("WEBHOOK_PORT", "8080"))
         
         logger.info(f"Starting ClickUp webhook server on port {port}")
-        web.run_app(app, host="0.0.0.0", port=port)
+        
+        # Start server with better error handling
+        web.run_app(
+            app, 
+            host="0.0.0.0", 
+            port=port,
+            access_log=None,  # Disable access logs to reduce noise
+            print=lambda x: None  # Disable startup message
+        )
         
     except Exception as e:
         logger.error(f"Webhook server error: {e}")
+        import traceback
+        logger.error(f"Webhook server traceback: {traceback.format_exc()}")
 
 def run_webhook_server():
     """Run webhook server in background thread"""
@@ -2840,7 +2856,13 @@ if __name__ == "__main__":
             # Start ClickUp webhook server
             run_webhook_server()
             logger.info("Starting Creative Studio AI...")
-            bot.run(token)
+            
+            # Run bot with improved connection settings
+            bot.run(
+                token, 
+                reconnect=True,  # Enable automatic reconnection
+                log_level=logging.INFO  # Set log level
+            )
         except discord.errors.LoginFailure:
             logger.error("❌ Invalid Discord bot token!")
             print("❌ Invalid Discord bot token! Check your DISCORD_BOT_TOKEN environment variable.")
