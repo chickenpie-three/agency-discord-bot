@@ -17,6 +17,7 @@ import asyncio
 import signal
 import sys
 import traceback
+import time
 from aiohttp import web
 # Voice meeting imports (simplified)
 from concurrent.futures import ThreadPoolExecutor
@@ -28,44 +29,81 @@ class ResumeHandler(commands.Cog):
         self.bot = bot
         bot.add_listener(self.on_resumed, "on_resumed")
         bot.add_listener(self.on_disconnect, "on_disconnect")
+        self.last_sync_time = 0
+        self.sync_cooldown = 300  # 5 minutes cooldown between syncs
+        self.daily_sync_count = 0
+        self.daily_sync_reset_time = 0
+
+    def can_sync_commands(self):
+        """Check if we can sync commands without hitting rate limits"""
+        current_time = time.time()
+        
+        # Reset daily counter if it's a new day
+        if current_time - self.daily_sync_reset_time > 86400:  # 24 hours
+            self.daily_sync_count = 0
+            self.daily_sync_reset_time = current_time
+        
+        # Check daily limit (200 commands per day)
+        if self.daily_sync_count >= 190:  # Leave some buffer
+            logger.warning(f"⚠️ Daily sync limit reached ({self.daily_sync_count}/200). Skipping sync.")
+            return False
+        
+        # Check cooldown period
+        if current_time - self.last_sync_time < self.sync_cooldown:
+            logger.info(f"⏳ Sync cooldown active. Next sync in {self.sync_cooldown - (current_time - self.last_sync_time):.0f}s")
+            return False
+        
+        return True
 
     async def on_resumed(self):
-        print("🔄 Bot resume event detected! Ensuring commands are working...")
+        print("🔄 Bot resume event detected! Checking command status...")
         try:
             # Re-login if needed
             if not self.bot.is_ready():
                 await self.bot.login(os.getenv("DISCORD_TOKEN"))
                 print("✅ Reconnect login successful.")
             
-            # CRITICAL: Re-sync commands to ensure they work after reconnection
+            # Check if commands are already working
             try:
-                synced = await self.bot.tree.sync()
-                print(f"✅ Commands re-synced after resume: {len(synced)} commands available")
-                logger.info(f"✅ Commands re-synced after resume: {len(synced)} commands available")
-            except Exception as sync_error:
-                print(f"❌ Command sync failed after resume: {sync_error}")
-                logger.error(f"❌ Command sync failed after resume: {sync_error}")
+                # Test if commands are accessible without syncing
+                command_count = len(self.bot.tree.get_commands())
+                if command_count > 0:
+                    print(f"✅ Commands already available: {command_count} commands")
+                    logger.info(f"✅ Commands already available: {command_count} commands")
+                    return
+            except Exception:
+                pass  # Commands might not be accessible, continue with sync check
             
-            # Verify bot is ready and commands are working
+            # Only sync if we can do so safely
+            if self.can_sync_commands():
+                try:
+                    synced = await self.bot.tree.sync()
+                    self.last_sync_time = time.time()
+                    self.daily_sync_count += 1
+                    print(f"✅ Commands re-synced after resume: {len(synced)} commands available")
+                    logger.info(f"✅ Commands re-synced after resume: {len(synced)} commands available")
+                except Exception as sync_error:
+                    if "429" in str(sync_error) or "rate limit" in str(sync_error).lower():
+                        print(f"⚠️ Rate limited - commands may still work. Error: {sync_error}")
+                        logger.warning(f"⚠️ Rate limited - commands may still work. Error: {sync_error}")
+                    else:
+                        print(f"❌ Command sync failed after resume: {sync_error}")
+                        logger.error(f"❌ Command sync failed after resume: {sync_error}")
+            else:
+                print("⏳ Skipping command sync due to rate limits - commands should still work")
+                logger.info("⏳ Skipping command sync due to rate limits - commands should still work")
+            
+            # Verify bot is ready
             if self.bot.is_ready():
-                print("✅ Bot fully operational with commands restored")
-                logger.info("✅ Bot fully operational with commands restored")
+                print("✅ Bot fully operational")
+                logger.info("✅ Bot fully operational")
             else:
                 print("⚠️ Bot reconnected but not fully ready")
                 logger.warning("⚠️ Bot reconnected but not fully ready")
                 
         except Exception as e:
-            print(f"❌ Resume failed: {e}. Retrying...")
+            print(f"❌ Resume failed: {e}")
             logger.error(f"❌ Resume failed: {e}")
-            # Retry after a delay
-            await asyncio.sleep(5)
-            try:
-                await self.bot.login(os.getenv("DISCORD_TOKEN"))
-                await self.bot.tree.sync()
-                print("✅ Retry successful - commands restored")
-            except Exception as retry_error:
-                print(f"❌ Retry failed: {retry_error}")
-                logger.error(f"❌ Retry failed: {retry_error}")
 
     async def on_disconnect(self):
         print("⚠️ Bot disconnected - will attempt to restore commands on reconnect")
@@ -977,12 +1015,20 @@ class CreativeStudioBot(commands.Bot):
         logger.info(f"Nano Banana: {NANO_BANANA_AVAILABLE}")
         logger.info(f"ClickUp integration: {'✅' if self.clickup_config['api_key'] else '❌'}")
         
-        # Force command sync on ready
+        # Force command sync on ready (only if needed)
         try:
-            synced = await self.tree.sync()
-            logger.info(f"✅ Commands synced on ready: {len(synced)} commands available")
+            # Check if commands are already available
+            command_count = len(self.tree.get_commands())
+            if command_count == 0:
+                synced = await self.tree.sync()
+                logger.info(f"✅ Commands synced on ready: {len(synced)} commands available")
+            else:
+                logger.info(f"✅ Commands already available on ready: {command_count} commands")
         except Exception as e:
-            logger.error(f"Ready sync error: {e}")
+            if "429" in str(e) or "rate limit" in str(e).lower():
+                logger.warning(f"⚠️ Rate limited on ready - commands may still work: {e}")
+            else:
+                logger.error(f"Ready sync error: {e}")
         
         # Add ResumeHandler for reconnection handling
         try:
@@ -1024,20 +1070,36 @@ class CreativeStudioBot(commands.Bot):
                     # Try to access the command tree - if this fails, commands might be broken
                     command_count = len(self.tree.get_commands())
                     if command_count == 0:
-                        logger.warning("⚠️ No commands found in tree - attempting to re-sync")
-                        synced = await self.tree.sync()
-                        logger.info(f"✅ Commands re-synced by health monitor: {len(synced)} commands")
+                        logger.warning("⚠️ No commands found in tree - checking if we can sync")
+                        
+                        # Get the ResumeHandler to check sync limits
+                        resume_handler = None
+                        for cog in self.cogs.values():
+                            if isinstance(cog, ResumeHandler):
+                                resume_handler = cog
+                                break
+                        
+                        # Only sync if we can do so safely
+                        if resume_handler and resume_handler.can_sync_commands():
+                            try:
+                                synced = await self.tree.sync()
+                                resume_handler.last_sync_time = time.time()
+                                resume_handler.daily_sync_count += 1
+                                logger.info(f"✅ Commands re-synced by health monitor: {len(synced)} commands")
+                            except Exception as sync_error:
+                                if "429" in str(sync_error) or "rate limit" in str(sync_error).lower():
+                                    logger.warning(f"⚠️ Rate limited during health check - commands may still work: {sync_error}")
+                                else:
+                                    logger.error(f"❌ Health monitor sync failed: {sync_error}")
+                        else:
+                            logger.info("⏳ Skipping health monitor sync due to rate limits")
                     else:
                         logger.debug(f"✅ Command health check passed: {command_count} commands available")
                         
                 except Exception as health_error:
                     logger.error(f"❌ Command health check failed: {health_error}")
-                    # Attempt to re-sync commands
-                    try:
-                        synced = await self.tree.sync()
-                        logger.info(f"✅ Commands re-synced after health check failure: {len(synced)} commands")
-                    except Exception as sync_error:
-                        logger.error(f"❌ Failed to re-sync commands after health check: {sync_error}")
+                    # Don't attempt to re-sync on health check failure to avoid rate limits
+                    logger.info("⏳ Skipping sync after health check failure to avoid rate limits")
                         
             except Exception as e:
                 logger.error(f"❌ Command health monitor error: {e}")
